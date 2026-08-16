@@ -131,11 +131,11 @@ export function TransactionTable({
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span>{t.description}</span>
                   {isDuplicate && (
                     <Badge
-                      className="border-amber-400 bg-amber-100 text-amber-800"
+                      className="whitespace-nowrap border-amber-400 bg-amber-100 text-amber-800"
                       title="同じ利用日・内容の精算済み(発行済み)の明細が履歴にあります"
                     >
                       精算済み?
