@@ -28,19 +28,22 @@ import {
   Settings,
 } from "lucide-react";
 import type { HistoryRecord, Transaction } from "@/lib/types";
-import { organizationIdByLabel, paymentMethodByLabel } from "@/lib/types";
+import { organizationIdByLabel, organizationLabel, paymentMethodByLabel } from "@/lib/types";
 import { getGasUrl, pushEditBuffer } from "@/lib/storage";
 import { fetchHistory, GasClientError } from "@/lib/gas-client";
 import { exportHistoryToCsv } from "@/lib/csv-export";
 
 const ALL_ISSUE_DATES = "all";
+const EXCLUDE_LABEL = organizationLabel("exclude");
 
 interface HistoryEntry {
   savedAt: string;
   status: string;
   issueDate: string;
   records: HistoryRecord[];
+  /** 除外(プライベート決済)を除いた金額合計・件数。PDF・集計と同じ扱いにしている。 */
   total: number;
+  billableCount: number;
 }
 
 function yen(amount: number): string {
@@ -53,11 +56,21 @@ function groupIntoEntries(records: HistoryRecord[]): HistoryEntry[] {
   for (const r of records) {
     let entry = map.get(r.savedAt);
     if (!entry) {
-      entry = { savedAt: r.savedAt, status: r.status, issueDate: r.issueDate, records: [], total: 0 };
+      entry = {
+        savedAt: r.savedAt,
+        status: r.status,
+        issueDate: r.issueDate,
+        records: [],
+        total: 0,
+        billableCount: 0,
+      };
       map.set(r.savedAt, entry);
     }
     entry.records.push(r);
-    entry.total += Number(r.amount) || 0;
+    if (r.organization !== EXCLUDE_LABEL) {
+      entry.total += Number(r.amount) || 0;
+      entry.billableCount += 1;
+    }
   }
   return Array.from(map.values()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
 }
@@ -272,7 +285,9 @@ export default function HomePage() {
                         </Badge>
                         <span className="text-sm font-medium">発行日: {entry.issueDate}</span>
                         <span className="text-xs text-muted-foreground">
-                          {entry.records.length}件
+                          {entry.billableCount}件
+                          {entry.records.length > entry.billableCount &&
+                            `(除外${entry.records.length - entry.billableCount}件)`}
                         </span>
                         <span className="ml-auto font-semibold">{yen(entry.total)}</span>
                         <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
@@ -298,22 +313,32 @@ export default function HomePage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {entry.records.map((r, i) => (
-                              <TableRow key={`${r.date}-${r.description}-${i}`}>
-                                <TableCell className="whitespace-nowrap text-muted-foreground">
-                                  {r.date}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant={r.paymentMethod === "現金" ? "outline" : "secondary"}>
-                                    {r.paymentMethod}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{r.organization}</TableCell>
-                                <TableCell>{r.description}</TableCell>
-                                <TableCell className="text-muted-foreground">{r.memo}</TableCell>
-                                <TableCell className="text-right font-medium">{yen(r.amount)}</TableCell>
-                              </TableRow>
-                            ))}
+                            {entry.records.map((r, i) => {
+                              const isExcluded = r.organization === EXCLUDE_LABEL;
+                              return (
+                                <TableRow
+                                  key={`${r.date}-${r.description}-${i}`}
+                                  className={isExcluded ? "text-muted-foreground" : undefined}
+                                >
+                                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                                    {r.date}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={r.paymentMethod === "現金" ? "outline" : "secondary"}
+                                    >
+                                      {r.paymentMethod}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{r.organization}</TableCell>
+                                  <TableCell>{r.description}</TableCell>
+                                  <TableCell className="text-muted-foreground">{r.memo}</TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    {yen(r.amount)}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>

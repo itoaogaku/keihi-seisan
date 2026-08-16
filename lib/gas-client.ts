@@ -68,8 +68,10 @@ export function buildSavePayload(
     status: meta.status,
     statusLabel: SAVE_STATUS_LABELS[meta.status],
     replaceSavedAt: meta.replaceSavedAt,
+    // 「除外」の明細もスプレッドシートには保存する(PDF・集計には含めない)。
+    // こうしないと、保存後に一覧から編集し直したときに除外した明細が復元できず消えてしまう。
     transactions: transactions
-      .filter((t) => t.organization && t.organization !== "exclude")
+      .filter((t) => t.organization !== null)
       .map((t) => ({
         date: t.date,
         description: t.description,
