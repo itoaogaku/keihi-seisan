@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CsvUploader } from "@/components/csv-uploader";
 import { CashEntryForm } from "@/components/cash-entry-form";
 import { TransactionTable } from "@/components/transaction-table";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { History, Settings } from "lucide-react";
+import { History, Plane, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { computePeriod, aggregateByOrganization, filterByPeriod } from "@/lib/aggregate";
 import {
@@ -22,7 +23,8 @@ import {
   saveDraftTransactions,
 } from "@/lib/storage";
 import { generateExpensePdf } from "@/lib/pdf-generator";
-import { buildSavePayload, saveTransactions, GasClientError } from "@/lib/gas-client";
+import { buildSavePayload, saveTransactions, fetchHistory, GasClientError } from "@/lib/gas-client";
+import { pushTripReportTransfer } from "@/lib/trip-report-storage";
 
 const today = new Date();
 const defaultYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
@@ -30,6 +32,7 @@ const defaultYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).
 const defaultIssueDate = today.toISOString().slice(0, 10);
 
 export default function HomePage() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [closingDay, setClosingDay] = useState(15);
   const [targetYearMonth, setTargetYearMonth] = useState(defaultYearMonth);
@@ -40,10 +43,29 @@ export default function HomePage() {
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(
     null
   );
+  const [historyMemoMap, setHistoryMemoMap] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setTransactions(loadDraftTransactions());
-    setGasUrlConfigured(Boolean(getGasUrl()));
+    const gasUrl = getGasUrl();
+    setGasUrlConfigured(Boolean(gasUrl));
+    if (!gasUrl) return;
+
+    fetchHistory(gasUrl)
+      .then((records) => {
+        const sorted = [...records].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+        const map: Record<string, string> = {};
+        for (const r of sorted) {
+          if (r.memo && !map[r.description]) {
+            map[r.description] = r.memo;
+          }
+        }
+        setHistoryMemoMap(map);
+      })
+      .catch(() => {
+        // 履歴が取得できなくてもメモの自動反映を諦めるだけで、アプリ全体には影響させない
+      });
   }, []);
 
   useEffect(() => {
@@ -67,8 +89,15 @@ export default function HomePage() {
     [transactions, periodStart, periodEnd]
   );
 
+  /** 過去に同じ内容(内容欄が完全一致)の明細があれば、そのメモを引き継ぐ。 */
+  function withHistoricalMemo(t: Transaction): Transaction {
+    if (t.memo) return t;
+    const historical = historyMemoMap[t.description];
+    return historical ? { ...t, memo: historical } : t;
+  }
+
   function handleImport(imported: Transaction[], skippedRows: number) {
-    setTransactions((prev) => [...prev, ...imported]);
+    setTransactions((prev) => [...prev, ...imported.map(withHistoricalMemo)]);
     setStatus({
       type: "success",
       message: `${imported.length}件を取り込みました。${
@@ -79,7 +108,13 @@ export default function HomePage() {
 
   function handleChangeOrganization(id: string, organization: OrganizationId) {
     setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, organization } : t))
+      prev.map((t) =>
+        t.id === id
+          ? organization === "exclude"
+            ? { ...t, organization }
+            : withHistoricalMemo({ ...t, organization })
+          : t
+      )
     );
   }
 
@@ -88,12 +123,70 @@ export default function HomePage() {
   }
 
   function handleAddCashTransaction(transaction: Transaction) {
-    setTransactions((prev) => [...prev, transaction]);
+    setTransactions((prev) => [...prev, withHistoricalMemo(transaction)]);
     setStatus({ type: "success", message: "現金決済を1件追加しました。" });
   }
 
   function handleDelete(id: string) {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function handleToggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function handleToggleSelectAll(ids: string[], checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (checked) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  /** 選択した明細を出張報告書タブへ経費として転記する。除外扱いの明細は転記しない。 */
+  function handleTranscribeToTripReport() {
+    const selected = transactions.filter(
+      (t) => selectedIds.has(t.id) && t.organization !== "exclude"
+    );
+
+    if (selected.length === 0) {
+      setStatus({
+        type: "error",
+        message: "転記できる明細が選択されていません(「除外」の明細は転記できません)。",
+      });
+      return;
+    }
+
+    pushTripReportTransfer(
+      selected.map((t) => ({
+        id: t.id,
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        note: t.memo,
+      }))
+    );
+    router.push("/business-trip-report");
   }
 
   /**
@@ -168,6 +261,12 @@ export default function HomePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/business-trip-report">
+            <Button variant="outline" size="sm">
+              <Plane className="mr-2 h-4 w-4" />
+              出張報告書
+            </Button>
+          </Link>
           <Link href="/history">
             <Button variant="outline" size="sm">
               <History className="mr-2 h-4 w-4" />
@@ -217,15 +316,27 @@ export default function HomePage() {
           <CardTitle>明細の仕分け</CardTitle>
           <CardDescription>
             各明細の請求先組織を選択してください。プライベートの決済は「除外」を選びます。
+            チェックした明細は「出張報告書へ転記」で出張報告書タブの経費欄に追加できます。
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <TransactionTable
             transactions={transactions}
             onChangeOrganization={handleChangeOrganization}
             onChangeMemo={handleChangeMemo}
             onDelete={handleDelete}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onToggleSelectAll={handleToggleSelectAll}
           />
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-end">
+              <Button variant="outline" size="sm" onClick={handleTranscribeToTripReport}>
+                <Plane className="mr-2 h-4 w-4" />
+                選択した{selectedIds.size}件を出張報告書へ転記
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

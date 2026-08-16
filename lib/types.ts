@@ -62,6 +62,26 @@ export interface AggregationResult {
   byOrganization: OrganizationSummary[];
 }
 
+/** 出張報告書の経費テーブル1行 */
+export interface TripExpenseRow {
+  id: string;
+  date: string; // ISO date (YYYY-MM-DD)
+  description: string;
+  amount: number;
+  note: string; // 備考
+}
+
+/** 出張報告書1件分のデータ */
+export interface TripReport {
+  reportDate: string; // 右上の「日時」(報告書の発行日)
+  applicantName: string; // 氏名
+  tripDate: string; // 出張の「日時」
+  location: string; // 場所
+  purpose: string; // 目的
+  content: string; // 報告内容
+  expenses: TripExpenseRow[];
+}
+
 /** スプレッドシートに保存済みの明細1件(GASの一覧取得APIが返す形) */
 export interface HistoryRecord {
   savedAt: string;

@@ -22,6 +22,9 @@ interface TransactionTableProps {
   onChangeOrganization: (id: string, organization: OrganizationId) => void;
   onChangeMemo: (id: string, memo: string) => void;
   onDelete: (id: string) => void;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onToggleSelectAll: (ids: string[], checked: boolean) => void;
 }
 
 function yen(amount: number): string {
@@ -33,6 +36,9 @@ export function TransactionTable({
   onChangeOrganization,
   onChangeMemo,
   onDelete,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: TransactionTableProps) {
   const [onlyUnclassified, setOnlyUnclassified] = useState(false);
 
@@ -40,6 +46,8 @@ export function TransactionTable({
     () => (onlyUnclassified ? transactions.filter((t) => !t.organization) : transactions),
     [transactions, onlyUnclassified]
   );
+
+  const allVisibleSelected = visible.length > 0 && visible.every((t) => selectedIds.has(t.id));
 
   const unclassifiedCount = transactions.filter((t) => !t.organization).length;
 
@@ -72,6 +80,19 @@ export function TransactionTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={(e) =>
+                  onToggleSelectAll(
+                    visible.map((t) => t.id),
+                    e.target.checked
+                  )
+                }
+                aria-label="表示中の明細をすべて選択"
+              />
+            </TableHead>
             <TableHead className="w-28">利用日</TableHead>
             <TableHead className="w-16">方法</TableHead>
             <TableHead>内容</TableHead>
@@ -84,6 +105,14 @@ export function TransactionTable({
         <TableBody>
           {visible.map((t) => (
             <TableRow key={t.id}>
+              <TableCell>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(t.id)}
+                  onChange={() => onToggleSelect(t.id)}
+                  aria-label="この明細を選択"
+                />
+              </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">{t.date}</TableCell>
               <TableCell>
                 <Badge variant={t.paymentMethod === "cash" ? "outline" : "secondary"}>
@@ -94,10 +123,11 @@ export function TransactionTable({
               <TableCell className="text-right font-medium">{yen(t.amount)}</TableCell>
               <TableCell>
                 <Input
-                  value={t.memo}
+                  value={t.organization === "exclude" ? "-" : t.memo}
                   onChange={(e) => onChangeMemo(t.id, e.target.value)}
                   placeholder="メモ"
                   className="h-9"
+                  disabled={t.organization === "exclude"}
                 />
               </TableCell>
               <TableCell>
