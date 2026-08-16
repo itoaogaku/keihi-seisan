@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { ArrowLeft, Plane, Settings } from "lucide-react";
+import { ArrowLeft, Eye, Pencil, Plane, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { organizationIdByLabel } from "@/lib/types";
 import { aggregateByOrganization } from "@/lib/aggregate";
+import { buildSummaryHtml } from "@/lib/pdf-template";
 import {
   clearDraftTransactions,
   getGasUrl,
@@ -50,6 +51,7 @@ export default function NewEntryPage() {
   const [settledKeys, setSettledKeys] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingSavedAt, setEditingSavedAt] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // popEditBuffer()はlocalStorageを消費する副作用のため、React 18の開発モードによる
   // effect二重実行で2回走ると編集データが失われる。refで初回のみに限定して防ぐ。
@@ -112,6 +114,12 @@ export default function NewEntryPage() {
   const unclassifiedCount = transactions.filter((t) => !t.organization).length;
 
   const aggregation = useMemo(() => aggregateByOrganization(transactions), [transactions]);
+
+  /** 実際にPDFへ出力されるものと同じHTMLを、確定前のプレビュー表示にも使う。 */
+  const previewHtml = useMemo(
+    () => buildSummaryHtml(aggregation, { issueDate, note }),
+    [aggregation, issueDate, note]
+  );
 
   /**
    * 過去に同じ内容(内容欄が完全一致)の明細があれば、仕分け(請求先組織)とメモを引き継ぐ。
@@ -352,91 +360,119 @@ export default function NewEntryPage() {
         </Alert>
       )}
 
-      <CsvUploader onImport={handleImport} />
-
-      <CashEntryForm onAdd={handleAddCashTransaction} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>明細の仕分け</CardTitle>
-          <CardDescription>
-            各明細の請求先組織を選択してください。プライベートの決済は「除外」を選びます。
-            チェックした明細は「出張報告書へ転記」で出張報告書タブの経費欄に追加できます。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <TransactionTable
-            transactions={transactions}
-            onChangeOrganization={handleChangeOrganization}
-            onChangeMemo={handleChangeMemo}
-            onDelete={handleDelete}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onToggleSelectAll={handleToggleSelectAll}
-            settledKeys={settledKeys}
-          />
-          {selectedIds.size > 0 && (
-            <div className="flex items-center justify-end">
-              <Button variant="outline" size="sm" onClick={handleTranscribeToTripReport}>
-                <Plane className="mr-2 h-4 w-4" />
-                選択した{selectedIds.size}件を出張報告書へ転記
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <SummaryPanel result={aggregation} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>3. PDF出力・保存</CardTitle>
-          <CardDescription>
-            未仕分けの明細が残っていると集計から漏れます。事前に確認してください。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {unclassifiedCount > 0 && (
-            <Alert variant="destructive">未仕分けの明細が{unclassifiedCount}件あります。</Alert>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="issue-date">発行日</Label>
-              <Input
-                id="issue-date"
-                type="date"
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="note">備考(任意)</Label>
-              <Textarea
-                id="note"
-                className="min-h-10"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
+      {previewOpen ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)} disabled={busy !== null}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集に戻る
+            </Button>
+            <Button onClick={handleFinalizeAndGeneratePdf} disabled={busy !== null || !gasUrlConfigured}>
+              {busy === "pdf" ? "確定・PDF作成中..." : "この内容でPDFを出力"}
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            「経費精算PDFを出力」は確定版としてスプレッドシートに保存したうえでPDFを作成し、一覧画面に戻ります。
-            まだ確定しない下書き段階では「下書き保存」をご利用ください(保存後、一覧の一番上に追加されます)。
+            実際に出力されるPDFのプレビューです。内容に問題がなければ「この内容でPDFを出力」を押してください。
+            確定版としてスプレッドシートへの保存とPDFのダウンロードが行われ、一覧画面に戻ります。
           </p>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleFinalizeAndGeneratePdf} disabled={busy !== null || !gasUrlConfigured}>
-              {busy === "pdf" ? "確定・PDF作成中..." : "経費精算PDFを出力"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleSaveDraft}
-              disabled={busy !== null || !gasUrlConfigured}
-            >
-              {busy === "save" ? "保存中..." : "下書き保存"}
-            </Button>
+          <div className="overflow-x-auto rounded-lg border border-border bg-slate-100 p-4 sm:p-8">
+            <div
+              className="mx-auto w-fit shadow-sm"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <>
+          <CsvUploader onImport={handleImport} />
+
+          <CashEntryForm onAdd={handleAddCashTransaction} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>明細の仕分け</CardTitle>
+              <CardDescription>
+                各明細の請求先組織を選択してください。プライベートの決済は「除外」を選びます。
+                チェックした明細は「出張報告書へ転記」で出張報告書タブの経費欄に追加できます。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <TransactionTable
+                transactions={transactions}
+                onChangeOrganization={handleChangeOrganization}
+                onChangeMemo={handleChangeMemo}
+                onDelete={handleDelete}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleSelectAll={handleToggleSelectAll}
+                settledKeys={settledKeys}
+              />
+              {selectedIds.size > 0 && (
+                <div className="flex items-center justify-end">
+                  <Button variant="outline" size="sm" onClick={handleTranscribeToTripReport}>
+                    <Plane className="mr-2 h-4 w-4" />
+                    選択した{selectedIds.size}件を出張報告書へ転記
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <SummaryPanel result={aggregation} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>3. PDF出力・保存</CardTitle>
+              <CardDescription>
+                未仕分けの明細が残っていると集計から漏れます。事前に確認してください。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {unclassifiedCount > 0 && (
+                <Alert variant="destructive">未仕分けの明細が{unclassifiedCount}件あります。</Alert>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="issue-date">発行日</Label>
+                  <Input
+                    id="issue-date"
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="note">備考(任意)</Label>
+                  <Textarea
+                    id="note"
+                    className="min-h-10"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                「プレビューしてPDFを出力」でプレビュー画面を確認したうえで、確定版としてスプレッドシートに
+                保存とPDF作成を行います。まだ確定しない下書き段階では「下書き保存」をご利用ください
+                (保存後、一覧の一番上に追加されます)。
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => setPreviewOpen(true)} disabled={busy !== null || !gasUrlConfigured}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  プレビューしてPDFを出力
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveDraft}
+                  disabled={busy !== null || !gasUrlConfigured}
+                >
+                  {busy === "save" ? "保存中..." : "下書き保存"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
