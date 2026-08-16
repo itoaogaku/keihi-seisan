@@ -26,11 +26,12 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Trash2,
 } from "lucide-react";
 import type { HistoryRecord, Transaction } from "@/lib/types";
 import { organizationIdByLabel, organizationLabel, paymentMethodByLabel } from "@/lib/types";
 import { getGasUrl, pushEditBuffer } from "@/lib/storage";
-import { fetchHistory, GasClientError } from "@/lib/gas-client";
+import { deleteHistoryEntry, fetchHistory, GasClientError } from "@/lib/gas-client";
 import { exportHistoryToCsv } from "@/lib/csv-export";
 
 const ALL_ISSUE_DATES = "all";
@@ -83,6 +84,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [issueDateFilter, setIssueDateFilter] = useState(ALL_ISSUE_DATES);
   const [expandedSavedAt, setExpandedSavedAt] = useState<string | null>(null);
+  const [deletingSavedAt, setDeletingSavedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const gasUrl = getGasUrl();
@@ -153,6 +155,28 @@ export default function HomePage() {
 
     pushEditBuffer({ transactions, issueDate: entry.issueDate, savedAt: entry.savedAt });
     router.push("/new");
+  }
+
+  /** 保存済みのエントリをスプレッドシートから削除する。 */
+  async function handleDelete(entry: HistoryEntry) {
+    const gasUrl = getGasUrl();
+    if (!gasUrl) return;
+    if (!window.confirm(`発行日: ${entry.issueDate} のデータを削除しますか?この操作は取り消せません。`)) {
+      return;
+    }
+    setDeletingSavedAt(entry.savedAt);
+    setError(null);
+    try {
+      await deleteHistoryEntry(gasUrl, entry.savedAt);
+      setRecords((prev) => prev.filter((r) => r.savedAt !== entry.savedAt));
+      if (expandedSavedAt === entry.savedAt) {
+        setExpandedSavedAt(null);
+      }
+    } catch (err) {
+      setError(err instanceof GasClientError ? err.message : "削除に失敗しました。");
+    } finally {
+      setDeletingSavedAt(null);
+    }
   }
 
   return (
@@ -297,6 +321,16 @@ export default function HomePage() {
                       <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         編集
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleDelete(entry)}
+                        disabled={deletingSavedAt === entry.savedAt}
+                        aria-label="このデータを削除"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {deletingSavedAt === entry.savedAt ? "削除中..." : "削除"}
                       </Button>
                     </div>
                     {isExpanded && (

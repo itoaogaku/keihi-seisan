@@ -146,6 +146,35 @@ export async function fetchHistory(gasUrl: string): Promise<HistoryRecord[]> {
   return Array.isArray(data.records) ? (data.records as HistoryRecord[]) : [];
 }
 
+/**
+ * 指定した保存日時(savedAt)のエントリ(同じ保存操作で書き込まれた全行)を
+ * スプレッドシートから削除する。一覧画面の「削除」から呼び出す。
+ */
+export async function deleteHistoryEntry(gasUrl: string, savedAt: string): Promise<GasResponse> {
+  assertValidUrl(gasUrl);
+
+  let response: Response;
+  try {
+    response = await fetch(gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", savedAt }),
+    });
+  } catch (err) {
+    throw new GasClientError(
+      `GASへの接続に失敗しました。URLとデプロイ設定(アクセス:全員)を確認してください。(${
+        err instanceof Error ? err.message : String(err)
+      })`
+    );
+  }
+
+  const data = await parseGasResponse(response);
+  if (data.status !== "ok") {
+    throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
+  }
+  return data;
+}
+
 export async function testConnection(gasUrl: string): Promise<GasResponse> {
   assertValidUrl(gasUrl);
 

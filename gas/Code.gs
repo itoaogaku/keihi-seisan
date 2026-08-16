@@ -91,6 +91,17 @@ function doPost(e) {
     }
 
     var payload = JSON.parse(e.postData.contents);
+
+    if (payload.action === "delete") {
+      if (!payload.savedAt) {
+        return jsonResponse({ status: "error", message: "savedAtが指定されていません。" });
+      }
+      var deleteSheet = getOrCreateSheet();
+      var deleteSs = SpreadsheetApp.getActiveSpreadsheet();
+      deleteRowsBySavedAt(deleteSheet, deleteSs.getSpreadsheetTimeZone(), payload.savedAt);
+      return jsonResponse({ status: "ok" });
+    }
+
     var transactions = payload.transactions || [];
 
     if (!Array.isArray(transactions)) {

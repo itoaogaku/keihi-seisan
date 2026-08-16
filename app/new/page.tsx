@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { ArrowLeft, Plane, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
+import { organizationIdByLabel } from "@/lib/types";
 import { aggregateByOrganization } from "@/lib/aggregate";
 import {
   clearDraftTransactions,
@@ -45,6 +46,7 @@ export default function NewEntryPage() {
     null
   );
   const [historyMemoMap, setHistoryMemoMap] = useState<Record<string, string>>({});
+  const [historyOrgMap, setHistoryOrgMap] = useState<Record<string, OrganizationId>>({});
   const [settledKeys, setSettledKeys] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingSavedAt, setEditingSavedAt] = useState<string | null>(null);
@@ -73,12 +75,20 @@ export default function NewEntryPage() {
       .then((records) => {
         const sorted = [...records].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
         const map: Record<string, string> = {};
+        const orgMap: Record<string, OrganizationId> = {};
         for (const r of sorted) {
           if (r.memo && !map[r.description]) {
             map[r.description] = r.memo;
           }
+          if (!orgMap[r.description]) {
+            const orgId = organizationIdByLabel(r.organization);
+            if (orgId) {
+              orgMap[r.description] = orgId;
+            }
+          }
         }
         setHistoryMemoMap(map);
+        setHistoryOrgMap(orgMap);
 
         // 発行済み(確定済み)の明細と同じ日付・内容のものを、取り込み時の重複候補として警告表示する。
         // 編集中のエントリ自身(replaceSavedAt対象)は重複扱いにしない。
@@ -103,15 +113,29 @@ export default function NewEntryPage() {
 
   const aggregation = useMemo(() => aggregateByOrganization(transactions), [transactions]);
 
-  /** 過去に同じ内容(内容欄が完全一致)の明細があれば、そのメモを引き継ぐ。 */
-  function withHistoricalMemo(t: Transaction): Transaction {
-    if (t.memo) return t;
-    const historical = historyMemoMap[t.description];
-    return historical ? { ...t, memo: historical } : t;
+  /**
+   * 過去に同じ内容(内容欄が完全一致)の明細があれば、仕分け(請求先組織)とメモを引き継ぐ。
+   * 組織は未仕分けのときのみ補完し、既にユーザーが選んだ組織は上書きしない。
+   */
+  function withHistoricalDefaults(t: Transaction): Transaction {
+    let next = t;
+    if (!next.organization) {
+      const historicalOrg = historyOrgMap[next.description];
+      if (historicalOrg) {
+        next = { ...next, organization: historicalOrg };
+      }
+    }
+    if (!next.memo) {
+      const historicalMemo = historyMemoMap[next.description];
+      if (historicalMemo) {
+        next = { ...next, memo: historicalMemo };
+      }
+    }
+    return next;
   }
 
   function handleImport(imported: Transaction[], skippedRows: number) {
-    setTransactions((prev) => [...prev, ...imported.map(withHistoricalMemo)]);
+    setTransactions((prev) => [...prev, ...imported.map(withHistoricalDefaults)]);
     const duplicateCount = imported.filter((t) =>
       settledKeys.has(duplicateKey(t.date, t.description))
     ).length;
@@ -133,7 +157,7 @@ export default function NewEntryPage() {
         t.id === id
           ? organization === "exclude"
             ? { ...t, organization }
-            : withHistoricalMemo({ ...t, organization })
+            : withHistoricalDefaults({ ...t, organization })
           : t
       )
     );
@@ -144,7 +168,7 @@ export default function NewEntryPage() {
   }
 
   function handleAddCashTransaction(transaction: Transaction) {
-    setTransactions((prev) => [...prev, withHistoricalMemo(transaction)]);
+    setTransactions((prev) => [...prev, withHistoricalDefaults(transaction)]);
     setStatus({ type: "success", message: "現金決済を1件追加しました。" });
   }
 
