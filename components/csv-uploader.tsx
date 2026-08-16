@@ -32,43 +32,52 @@ export function CsvUploader({ onImport }: CsvUploaderProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>1. 明細の取り込み</CardTitle>
-        <CardDescription>
-          クレジットカード会社からダウンロードしたCSVファイル、または明細をコピーして貼り付けてください。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files?.[0];
-            if (file) void handleFile(file);
-          }}
-          className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-8 text-center text-sm text-muted-foreground"
-        >
-          <Upload className="h-6 w-6" />
-          <p>CSVファイルをドラッグ&ドロップ、またはクリックして選択</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>1. 明細の取り込み</CardTitle>
+          <CardDescription>
+            クレジットカード会社からダウンロードしたCSVファイルを取り込んでください。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const file = e.dataTransfer.files?.[0];
               if (file) void handleFile(file);
-              e.target.value = "";
             }}
-          />
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            ファイルを選択
-          </Button>
-        </div>
+            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+          >
+            <Upload className="h-6 w-6" />
+            <p>CSVファイルをドラッグ&ドロップ、またはクリックして選択</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+                e.target.value = "";
+              }}
+            />
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              ファイルを選択
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">またはテキストを貼り付け</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>テキストを貼り付けて取り込む</CardTitle>
+          <CardDescription>
+            CSVファイルの代わりに、明細をコピーしてこちらに貼り付けても取り込めます。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
           <Textarea
             placeholder={"2026/08/01,〇〇文具店,3200\n2026/08/03,△△カフェ,850"}
             value={pasteText}
@@ -77,8 +86,8 @@ export function CsvUploader({ onImport }: CsvUploaderProps) {
           <Button size="sm" onClick={handlePasteImport} disabled={!pasteText.trim()}>
             貼り付けた内容を取り込む
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   );
 }
