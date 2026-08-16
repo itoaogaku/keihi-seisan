@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -20,6 +22,8 @@ import { getGasUrl } from "@/lib/storage";
 import { fetchHistory, GasClientError } from "@/lib/gas-client";
 import { exportHistoryToCsv } from "@/lib/csv-export";
 
+const ALL_ISSUE_DATES = "all";
+
 function yen(amount: number): string {
   return `¥${(Number(amount) || 0).toLocaleString("ja-JP")}`;
 }
@@ -29,6 +33,7 @@ export default function HistoryPage() {
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issueDateFilter, setIssueDateFilter] = useState(ALL_ISSUE_DATES);
 
   const load = useCallback(async () => {
     const gasUrl = getGasUrl();
@@ -54,10 +59,29 @@ export default function HistoryPage() {
     void load();
   }, [load]);
 
-  const grandTotal = records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const issueDates = useMemo(
+    () =>
+      Array.from(new Set(records.map((r) => r.issueDate).filter(Boolean))).sort((a, b) =>
+        b.localeCompare(a)
+      ),
+    [records]
+  );
+
+  const filteredRecords = useMemo(
+    () =>
+      issueDateFilter === ALL_ISSUE_DATES
+        ? records
+        : records.filter((r) => r.issueDate === issueDateFilter),
+    [records, issueDateFilter]
+  );
+
+  const grandTotal = filteredRecords.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   function handleExport() {
-    exportHistoryToCsv(records, `経費精算_保存履歴_${new Date().toISOString().slice(0, 10)}.csv`);
+    exportHistoryToCsv(
+      filteredRecords,
+      `経費精算_保存履歴_${new Date().toISOString().slice(0, 10)}.csv`
+    );
   }
 
   return (
@@ -103,21 +127,41 @@ export default function HistoryPage() {
           <div>
             <CardTitle>一覧</CardTitle>
             <CardDescription>
-              {records.length > 0 ? (
+              {filteredRecords.length > 0 ? (
                 <>
-                  全{records.length}件 合計{yen(grandTotal)}
+                  全{filteredRecords.length}件 合計{yen(grandTotal)}
                 </>
               ) : (
                 "保存済みの明細"
               )}
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-end gap-2">
+            {issueDates.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="issue-date-filter" className="text-xs">
+                  発行日で絞り込み
+                </Label>
+                <Select
+                  id="issue-date-filter"
+                  className="h-9 w-40"
+                  value={issueDateFilter}
+                  onChange={(e) => setIssueDateFilter(e.target.value)}
+                >
+                  <option value={ALL_ISSUE_DATES}>すべて</option>
+                  {issueDates.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="mr-2 h-4 w-4" />
               更新
             </Button>
-            <Button size="sm" onClick={handleExport} disabled={records.length === 0}>
+            <Button size="sm" onClick={handleExport} disabled={filteredRecords.length === 0}>
               <Download className="mr-2 h-4 w-4" />
               CSVで書き出す
             </Button>
@@ -132,11 +176,17 @@ export default function HistoryPage() {
                 ? "保存されているデータはまだありません。"
                 : "GAS WebアプリURLを設定すると、ここに保存済みの明細が表示されます。"}
             </p>
+          ) : filteredRecords.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              選択した発行日のデータはありません。
+            </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-36">保存日時</TableHead>
+                  <TableHead className="w-20">区分</TableHead>
+                  <TableHead className="w-24">発行日</TableHead>
                   <TableHead className="w-24">利用日</TableHead>
                   <TableHead className="w-16">方法</TableHead>
                   <TableHead className="w-56">請求先組織</TableHead>
@@ -146,10 +196,18 @@ export default function HistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((r, i) => (
+                {filteredRecords.map((r, i) => (
                   <TableRow key={`${r.savedAt}-${r.date}-${i}`}>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {r.savedAt}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={r.status === "確定" ? "success" : "outline"}>
+                        {r.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {r.issueDate}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {r.date}

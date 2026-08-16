@@ -11,7 +11,7 @@ function formatDateJp(iso: string): string {
 }
 
 export interface PdfMeta {
-  applicantName: string;
+  issueDate: string; // ISO date (YYYY-MM-DD)
   note: string;
 }
 
@@ -58,8 +58,7 @@ export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): stri
         <div style="font-size:12px; color:#555;">対象期間: ${formatDateJp(periodStart)} 〜 ${formatDateJp(periodEnd)}</div>
       </div>
       <div style="text-align:right; font-size:12px; color:#555;">
-        <div>申請者: ${escapeHtml(meta.applicantName || "-")}</div>
-        <div>作成日: ${formatDateJp(new Date().toISOString().slice(0, 10))}</div>
+        <div>発行日: ${meta.issueDate ? formatDateJp(meta.issueDate) : "-"}</div>
       </div>
     </div>
 

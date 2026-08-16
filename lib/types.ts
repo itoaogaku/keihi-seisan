@@ -29,6 +29,14 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "現金",
 };
 
+/** draft: スプレッドシートへの一時保存 / final: 経費精算PDF出力とあわせて行う確定保存 */
+export type SaveStatus = "draft" | "final";
+
+export const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
+  draft: "一時保存",
+  final: "確定",
+};
+
 export interface Transaction {
   id: string;
   date: string; // ISO date (YYYY-MM-DD)
@@ -57,6 +65,8 @@ export interface AggregationResult {
 /** スプレッドシートに保存済みの明細1件(GASの一覧取得APIが返す形) */
 export interface HistoryRecord {
   savedAt: string;
+  status: string;
+  issueDate: string;
   periodStart: string;
   periodEnd: string;
   date: string;

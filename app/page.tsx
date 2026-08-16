@@ -27,11 +27,13 @@ import { buildSavePayload, saveTransactions, GasClientError } from "@/lib/gas-cl
 const today = new Date();
 const defaultYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
+const defaultIssueDate = today.toISOString().slice(0, 10);
+
 export default function HomePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [closingDay, setClosingDay] = useState(15);
   const [targetYearMonth, setTargetYearMonth] = useState(defaultYearMonth);
-  const [applicantName, setApplicantName] = useState("");
+  const [issueDate, setIssueDate] = useState(defaultIssueDate);
   const [note, setNote] = useState("");
   const [gasUrlConfigured, setGasUrlConfigured] = useState(true);
   const [busy, setBusy] = useState<"pdf" | "save" | null>(null);
@@ -94,35 +96,25 @@ export default function HomePage() {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   }
 
-  async function handleGeneratePdf() {
+  /**
+   * 確定操作: スプレッドシートへの確定保存とPDF出力を1つの操作として行う。
+   * 「完成版」として扱うため、保存に失敗した場合はPDFは出力しない。
+   */
+  async function handleFinalizeAndGeneratePdf() {
     setStatus(null);
     setBusy("pdf");
     try {
-      await generateExpensePdf(aggregation, { applicantName, note });
-      setStatus({ type: "success", message: "PDFを出力しました。" });
-    } catch (err) {
-      setStatus({
-        type: "error",
-        message: `PDFの出力に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
-      });
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleSaveToSheet() {
-    setStatus(null);
-    setBusy("save");
-    try {
       const gasUrl = getGasUrl();
-      const payload = buildSavePayload(periodTransactions, {
-        start: periodStart,
-        end: periodEnd,
-      });
+      const payload = buildSavePayload(
+        periodTransactions,
+        { start: periodStart, end: periodEnd },
+        { issueDate, status: "final" }
+      );
       const res = await saveTransactions(gasUrl, payload);
+      await generateExpensePdf(aggregation, { issueDate, note });
       setStatus({
         type: "success",
-        message: `スプレッドシートに${res.saved ?? payload.transactions.length}件保存しました。`,
+        message: `確定として${res.saved ?? payload.transactions.length}件をスプレッドシートに保存し、PDFを出力しました。`,
       });
     } catch (err) {
       setStatus({
@@ -130,7 +122,36 @@ export default function HomePage() {
         message:
           err instanceof GasClientError
             ? err.message
-            : `保存に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+            : `確定に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** 下書き保存: PDFは作らず、確定前のデータをスプレッドシートに一時保存する。 */
+  async function handleSaveDraft() {
+    setStatus(null);
+    setBusy("save");
+    try {
+      const gasUrl = getGasUrl();
+      const payload = buildSavePayload(
+        periodTransactions,
+        { start: periodStart, end: periodEnd },
+        { issueDate, status: "draft" }
+      );
+      const res = await saveTransactions(gasUrl, payload);
+      setStatus({
+        type: "success",
+        message: `スプレッドシートに${res.saved ?? payload.transactions.length}件を一時保存しました。`,
+      });
+    } catch (err) {
+      setStatus({
+        type: "error",
+        message:
+          err instanceof GasClientError
+            ? err.message
+            : `一時保存に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
       });
     } finally {
       setBusy(null);
@@ -164,11 +185,11 @@ export default function HomePage() {
 
       {!gasUrlConfigured && (
         <Alert variant="destructive">
-          GAS WebアプリURLが未設定です。スプレッドシートへの保存機能を使うには、
+          GAS WebアプリURLが未設定です。一時保存・確定(PDF出力)を行うには、
           <Link href="/settings" className="underline font-medium">
             設定画面
           </Link>
-          であなた自身のURLを登録してください。(PDF出力のみなら設定不要です)
+          であなた自身のURLを登録してください。
         </Alert>
       )}
 
@@ -225,12 +246,12 @@ export default function HomePage() {
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="applicant-name">申請者名</Label>
+              <Label htmlFor="issue-date">発行日</Label>
               <Input
-                id="applicant-name"
-                value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
-                placeholder="山田 太郎"
+                id="issue-date"
+                type="date"
+                value={issueDate}
+                onChange={(e) => setIssueDate(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
@@ -243,16 +264,20 @@ export default function HomePage() {
               />
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            「経費精算PDFを出力」は確定版としてスプレッドシートに保存したうえでPDFを作成します。
+            まだ確定しない下書き段階では「スプレッドシートに一時保存」をご利用ください。
+          </p>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={handleGeneratePdf} disabled={busy !== null}>
-              {busy === "pdf" ? "PDF作成中..." : "経費精算PDFを出力"}
+            <Button onClick={handleFinalizeAndGeneratePdf} disabled={busy !== null || !gasUrlConfigured}>
+              {busy === "pdf" ? "確定・PDF作成中..." : "経費精算PDFを出力"}
             </Button>
             <Button
               variant="secondary"
-              onClick={handleSaveToSheet}
+              onClick={handleSaveDraft}
               disabled={busy !== null || !gasUrlConfigured}
             >
-              {busy === "save" ? "保存中..." : "スプレッドシートに保存"}
+              {busy === "save" ? "保存中..." : "スプレッドシートに一時保存"}
             </Button>
           </div>
         </CardContent>

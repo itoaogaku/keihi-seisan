@@ -5,6 +5,8 @@ const BOM = "﻿";
 
 const COLUMNS: Array<{ key: keyof HistoryRecord; label: string }> = [
   { key: "savedAt", label: "保存日時" },
+  { key: "status", label: "保存区分" },
+  { key: "issueDate", label: "発行日" },
   { key: "periodStart", label: "対象期間開始" },
   { key: "periodEnd", label: "対象期間終了" },
   { key: "date", label: "利用日" },

@@ -13,6 +13,8 @@
 var SHEET_NAME = "経費データ";
 var HEADER_ROW = [
   "保存日時",
+  "保存区分",
+  "発行日",
   "対象期間開始",
   "対象期間終了",
   "利用日",
@@ -49,14 +51,16 @@ function getAllRecords() {
   return values.map(function (row) {
     return {
       savedAt: formatDateCell(row[0], tz, "yyyy-MM-dd HH:mm:ss"),
-      periodStart: formatDateCell(row[1], tz, "yyyy-MM-dd"),
-      periodEnd: formatDateCell(row[2], tz, "yyyy-MM-dd"),
-      date: formatDateCell(row[3], tz, "yyyy-MM-dd"),
-      paymentMethod: row[4],
-      description: row[5],
-      memo: row[6],
-      amount: row[7],
-      organization: row[8],
+      status: row[1],
+      issueDate: formatDateCell(row[2], tz, "yyyy-MM-dd"),
+      periodStart: formatDateCell(row[3], tz, "yyyy-MM-dd"),
+      periodEnd: formatDateCell(row[4], tz, "yyyy-MM-dd"),
+      date: formatDateCell(row[5], tz, "yyyy-MM-dd"),
+      paymentMethod: row[6],
+      description: row[7],
+      memo: row[8],
+      amount: row[9],
+      organization: row[10],
     };
   });
 }
@@ -92,6 +96,8 @@ function doPost(e) {
     var rows = transactions.map(function (t) {
       return [
         now,
+        payload.statusLabel || payload.status || "",
+        payload.issueDate || "",
         period.start || "",
         period.end || "",
         t.date || "",
