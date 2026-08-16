@@ -2,7 +2,6 @@ import type { HistoryRecord, SaveStatus, Transaction } from "./types";
 import { organizationLabel, PAYMENT_METHOD_LABELS, SAVE_STATUS_LABELS } from "./types";
 
 export interface SavePayload {
-  period: { start: string; end: string };
   savedAt: string;
   issueDate: string;
   status: SaveStatus;
@@ -59,11 +58,9 @@ async function parseGasResponse(response: Response): Promise<GasResponse> {
 
 export function buildSavePayload(
   transactions: Transaction[],
-  period: { start: string; end: string },
   meta: { issueDate: string; status: SaveStatus }
 ): SavePayload {
   return {
-    period,
     savedAt: new Date().toISOString(),
     issueDate: meta.issueDate,
     status: meta.status,

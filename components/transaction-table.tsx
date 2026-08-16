@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ORGANIZATIONS, PAYMENT_METHOD_LABELS } from "@/lib/types";
+import { ORGANIZATIONS, ORGANIZATION_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 
@@ -134,13 +134,29 @@ export function TransactionTable({
                 <Select
                   value={t.organization ?? ""}
                   onChange={(e) => onChangeOrganization(t.id, e.target.value as OrganizationId)}
-                  className={!t.organization ? "border-destructive text-destructive" : ""}
+                  className={!t.organization ? "border-destructive text-destructive font-medium" : "font-medium"}
+                  style={
+                    t.organization
+                      ? {
+                          backgroundColor: ORGANIZATION_COLORS[t.organization].bg,
+                          color: ORGANIZATION_COLORS[t.organization].text,
+                          borderColor: ORGANIZATION_COLORS[t.organization].text,
+                        }
+                      : undefined
+                  }
                 >
                   <option value="" disabled>
                     選択してください
                   </option>
                   {ORGANIZATIONS.map((org) => (
-                    <option key={org.id} value={org.id}>
+                    <option
+                      key={org.id}
+                      value={org.id}
+                      style={{
+                        backgroundColor: ORGANIZATION_COLORS[org.id].bg,
+                        color: ORGANIZATION_COLORS[org.id].text,
+                      }}
+                    >
                       {org.label}
                     </option>
                   ))}

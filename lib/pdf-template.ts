@@ -21,7 +21,7 @@ export interface PdfMeta {
  * インラインスタイルで完結させている(外部CSS読み込みタイミングに依存しないため)。
  */
 export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): string {
-  const { periodStart, periodEnd, grandTotal, byOrganization } = result;
+  const { grandTotal, byOrganization } = result;
 
   const orgRows = byOrganization
     .map(
@@ -54,8 +54,7 @@ export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): stri
   <div style="font-family: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif; color:#1a1a1a; padding:32px; width:730px; box-sizing:border-box; background:#ffffff;">
     <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #1a1a1a; padding-bottom:16px; margin-bottom:20px;">
       <div>
-        <h1 style="font-size:22px; margin:0 0 4px 0;">経費精算書</h1>
-        <div style="font-size:12px; color:#555;">対象期間: ${formatDateJp(periodStart)} 〜 ${formatDateJp(periodEnd)}</div>
+        <h1 style="font-size:22px; margin:0;">経費精算書</h1>
       </div>
       <div style="text-align:right; font-size:12px; color:#555;">
         <div>発行日: ${meta.issueDate ? formatDateJp(meta.issueDate) : "-"}</div>
@@ -108,7 +107,7 @@ const detailHeadStyle =
   "text-align:left; padding:6px 8px; background:#e5e7eb; color:#1a1a1a; font-weight:600; border-bottom:1px solid #d1d5db;";
 const cellStyle = "padding:8px; border-bottom:1px solid #e5e7eb;";
 const detailCellStyle = "padding:5px 8px; border-bottom:1px solid #eef0f2;";
-const emptyRow = `<tr><td colspan="6" style="${detailCellStyle} text-align:center; color:#888;">対象期間内に明細がありません</td></tr>`;
+const emptyRow = `<tr><td colspan="6" style="${detailCellStyle} text-align:center; color:#888;">明細がありません</td></tr>`;
 
 function escapeHtml(value: string): string {
   return value

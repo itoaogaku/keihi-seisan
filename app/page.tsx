@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { CsvUploader } from "@/components/csv-uploader";
 import { CashEntryForm } from "@/components/cash-entry-form";
 import { TransactionTable } from "@/components/transaction-table";
-import { PeriodSelector } from "@/components/period-selector";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { History, Plane, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
-import { computePeriod, aggregateByOrganization, filterByPeriod } from "@/lib/aggregate";
+import { aggregateByOrganization } from "@/lib/aggregate";
 import {
   getGasUrl,
   loadDraftTransactions,
@@ -26,16 +25,11 @@ import { generateExpensePdf } from "@/lib/pdf-generator";
 import { buildSavePayload, saveTransactions, fetchHistory, GasClientError } from "@/lib/gas-client";
 import { pushTripReportTransfer } from "@/lib/trip-report-storage";
 
-const today = new Date();
-const defaultYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-
-const defaultIssueDate = today.toISOString().slice(0, 10);
+const defaultIssueDate = new Date().toISOString().slice(0, 10);
 
 export default function HomePage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [closingDay, setClosingDay] = useState(15);
-  const [targetYearMonth, setTargetYearMonth] = useState(defaultYearMonth);
   const [issueDate, setIssueDate] = useState(defaultIssueDate);
   const [note, setNote] = useState("");
   const [gasUrlConfigured, setGasUrlConfigured] = useState(true);
@@ -72,22 +66,9 @@ export default function HomePage() {
     saveDraftTransactions(transactions);
   }, [transactions]);
 
-  const { periodStart, periodEnd } = useMemo(
-    () => computePeriod(closingDay, targetYearMonth),
-    [closingDay, targetYearMonth]
-  );
+  const unclassifiedCount = transactions.filter((t) => !t.organization).length;
 
-  const periodTransactions = useMemo(
-    () => filterByPeriod(transactions, periodStart, periodEnd),
-    [transactions, periodStart, periodEnd]
-  );
-
-  const unclassifiedInPeriod = periodTransactions.filter((t) => !t.organization).length;
-
-  const aggregation = useMemo(
-    () => aggregateByOrganization(transactions, periodStart, periodEnd),
-    [transactions, periodStart, periodEnd]
-  );
+  const aggregation = useMemo(() => aggregateByOrganization(transactions), [transactions]);
 
   /** 過去に同じ内容(内容欄が完全一致)の明細があれば、そのメモを引き継ぐ。 */
   function withHistoricalMemo(t: Transaction): Transaction {
@@ -198,11 +179,7 @@ export default function HomePage() {
     setBusy("pdf");
     try {
       const gasUrl = getGasUrl();
-      const payload = buildSavePayload(
-        periodTransactions,
-        { start: periodStart, end: periodEnd },
-        { issueDate, status: "final" }
-      );
+      const payload = buildSavePayload(transactions, { issueDate, status: "final" });
       const res = await saveTransactions(gasUrl, payload);
       await generateExpensePdf(aggregation, { issueDate, note });
       setStatus({
@@ -228,11 +205,7 @@ export default function HomePage() {
     setBusy("save");
     try {
       const gasUrl = getGasUrl();
-      const payload = buildSavePayload(
-        periodTransactions,
-        { start: periodStart, end: periodEnd },
-        { issueDate, status: "draft" }
-      );
+      const payload = buildSavePayload(transactions, { issueDate, status: "draft" });
       const res = await saveTransactions(gasUrl, payload);
       setStatus({
         type: "success",
@@ -302,15 +275,6 @@ export default function HomePage() {
 
       <CashEntryForm onAdd={handleAddCashTransaction} />
 
-      <PeriodSelector
-        closingDay={closingDay}
-        onChangeClosingDay={setClosingDay}
-        targetYearMonth={targetYearMonth}
-        onChangeTargetYearMonth={setTargetYearMonth}
-        periodStart={periodStart}
-        periodEnd={periodEnd}
-      />
-
       <Card>
         <CardHeader>
           <CardTitle>明細の仕分け</CardTitle>
@@ -344,16 +308,14 @@ export default function HomePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>4. PDF出力・保存</CardTitle>
+          <CardTitle>3. PDF出力・保存</CardTitle>
           <CardDescription>
-            集計期間内に未仕分けの明細が残っていると集計から漏れます。事前に確認してください。
+            未仕分けの明細が残っていると集計から漏れます。事前に確認してください。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {unclassifiedInPeriod > 0 && (
-            <Alert variant="destructive">
-              対象期間内に未仕分けの明細が{unclassifiedInPeriod}件あります。
-            </Alert>
+          {unclassifiedCount > 0 && (
+            <Alert variant="destructive">未仕分けの明細が{unclassifiedCount}件あります。</Alert>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">

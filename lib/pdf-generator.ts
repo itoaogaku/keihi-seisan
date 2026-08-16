@@ -10,5 +10,5 @@ export async function generateExpensePdf(
   meta: PdfMeta
 ): Promise<void> {
   const html = buildSummaryHtml(result, meta);
-  await renderHtmlToPdf(html, `経費精算書_${result.periodStart}_${result.periodEnd}.pdf`);
+  await renderHtmlToPdf(html, `経費精算書_${meta.issueDate || "未指定"}.pdf`);
 }

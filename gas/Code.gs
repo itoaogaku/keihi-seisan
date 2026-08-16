@@ -15,8 +15,6 @@ var HEADER_ROW = [
   "保存日時",
   "保存区分",
   "発行日",
-  "対象期間開始",
-  "対象期間終了",
   "利用日",
   "支払方法",
   "内容",
@@ -36,7 +34,7 @@ function doGet(e) {
 }
 
 /**
- * 保存済みの全明細をシートから読み出す(締め日等による絞り込みはしない)。
+ * 保存済みの全明細をシートから読み出す(絞り込みはしない)。
  */
 function getAllRecords() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -53,14 +51,12 @@ function getAllRecords() {
       savedAt: formatDateCell(row[0], tz, "yyyy-MM-dd HH:mm:ss"),
       status: row[1],
       issueDate: formatDateCell(row[2], tz, "yyyy-MM-dd"),
-      periodStart: formatDateCell(row[3], tz, "yyyy-MM-dd"),
-      periodEnd: formatDateCell(row[4], tz, "yyyy-MM-dd"),
-      date: formatDateCell(row[5], tz, "yyyy-MM-dd"),
-      paymentMethod: row[6],
-      description: row[7],
-      memo: row[8],
-      amount: row[9],
-      organization: row[10],
+      date: formatDateCell(row[3], tz, "yyyy-MM-dd"),
+      paymentMethod: row[4],
+      description: row[5],
+      memo: row[6],
+      amount: row[7],
+      organization: row[8],
     };
   });
 }
@@ -84,7 +80,6 @@ function doPost(e) {
 
     var payload = JSON.parse(e.postData.contents);
     var transactions = payload.transactions || [];
-    var period = payload.period || {};
 
     if (!Array.isArray(transactions)) {
       return jsonResponse({ status: "error", message: "transactionsが不正です。" });
@@ -98,8 +93,6 @@ function doPost(e) {
         now,
         payload.statusLabel || payload.status || "",
         payload.issueDate || "",
-        period.start || "",
-        period.end || "",
         t.date || "",
         t.paymentMethodLabel || t.paymentMethod || "",
         t.description || "",

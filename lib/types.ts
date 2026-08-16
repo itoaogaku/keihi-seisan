@@ -22,6 +22,15 @@ export function organizationLabel(id: OrganizationId | null): string {
   return ORGANIZATIONS.find((o) => o.id === id)?.label ?? id;
 }
 
+/** 仕分けプルダウンの視認性向上のための、請求先ごとの色。青山学院大学陸上競技部(orgD)は緑。 */
+export const ORGANIZATION_COLORS: Record<OrganizationId, { bg: string; text: string }> = {
+  exclude: { bg: "#f3f4f6", text: "#4b5563" },
+  orgA: { bg: "#dbeafe", text: "#1e3a8a" },
+  orgB: { bg: "#fef3c7", text: "#78350f" },
+  orgC: { bg: "#fce7f3", text: "#831843" },
+  orgD: { bg: "#dcfce7", text: "#166534" },
+};
+
 export type PaymentMethod = "card" | "cash";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -56,8 +65,6 @@ export interface OrganizationSummary {
 }
 
 export interface AggregationResult {
-  periodStart: string;
-  periodEnd: string;
   grandTotal: number;
   byOrganization: OrganizationSummary[];
 }
@@ -87,8 +94,6 @@ export interface HistoryRecord {
   savedAt: string;
   status: string;
   issueDate: string;
-  periodStart: string;
-  periodEnd: string;
   date: string;
   paymentMethod: string;
   description: string;
