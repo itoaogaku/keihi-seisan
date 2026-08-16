@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CsvUploader } from "@/components/csv-uploader";
@@ -20,6 +20,7 @@ import {
   clearDraftTransactions,
   getGasUrl,
   loadDraftTransactions,
+  popEditBuffer,
   saveDraftTransactions,
 } from "@/lib/storage";
 import { generateExpensePdf } from "@/lib/pdf-generator";
@@ -40,9 +41,24 @@ export default function NewEntryPage() {
   );
   const [historyMemoMap, setHistoryMemoMap] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingSavedAt, setEditingSavedAt] = useState<string | null>(null);
 
+  // popEditBuffer()はlocalStorageを消費する副作用のため、React 18の開発モードによる
+  // effect二重実行で2回走ると編集データが失われる。refで初回のみに限定して防ぐ。
+  const initializedRef = useRef(false);
   useEffect(() => {
-    setTransactions(loadDraftTransactions());
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    const editBuffer = popEditBuffer();
+    if (editBuffer) {
+      setTransactions(editBuffer.transactions);
+      setIssueDate(editBuffer.issueDate || defaultIssueDate);
+      setEditingSavedAt(editBuffer.savedAt);
+    } else {
+      setTransactions(loadDraftTransactions());
+    }
+
     const gasUrl = getGasUrl();
     setGasUrlConfigured(Boolean(gasUrl));
     if (!gasUrl) return;
@@ -181,7 +197,11 @@ export default function NewEntryPage() {
     setBusy("pdf");
     try {
       const gasUrl = getGasUrl();
-      const payload = buildSavePayload(transactions, { issueDate, status: "final" });
+      const payload = buildSavePayload(transactions, {
+        issueDate,
+        status: "final",
+        replaceSavedAt: editingSavedAt ?? undefined,
+      });
       await saveTransactions(gasUrl, payload);
       await generateExpensePdf(aggregation, { issueDate, note });
       clearDraftTransactions();
@@ -208,7 +228,11 @@ export default function NewEntryPage() {
     setBusy("save");
     try {
       const gasUrl = getGasUrl();
-      const payload = buildSavePayload(transactions, { issueDate, status: "draft" });
+      const payload = buildSavePayload(transactions, {
+        issueDate,
+        status: "draft",
+        replaceSavedAt: editingSavedAt ?? undefined,
+      });
       await saveTransactions(gasUrl, payload);
       clearDraftTransactions();
       router.push("/");
@@ -258,6 +282,12 @@ export default function NewEntryPage() {
           </div>
         </div>
       </header>
+
+      {editingSavedAt && (
+        <Alert>
+          一覧の既存データを編集しています。保存すると元のデータが置き換わります。
+        </Alert>
+      )}
 
       {!gasUrlConfigured && (
         <Alert variant="destructive">

@@ -1,15 +1,15 @@
 import type { TripExpenseRow, TripReport } from "./types";
 
 const TRANSFER_KEY = "keihi-seisan:trip-report-transfer";
-const DRAFT_KEY = "keihi-seisan:trip-report-draft";
+const REPORTS_KEY = "keihi-seisan:trip-reports";
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
 /**
- * 経費精算PDF作成画面でチェックした明細を、出張報告書タブへ渡すための
- * 一時的な受け渡し用バッファ。出張報告書タブ側が読み取ったら消費して消す。
+ * 経費精算PDF作成画面でチェックした明細を、出張報告書へ渡すための
+ * 一時的な受け渡し用バッファ。出張報告書側が読み取ったら消費して消す。
  */
 export function pushTripReportTransfer(items: TripExpenseRow[]): void {
   if (!isBrowser()) return;
@@ -33,22 +33,48 @@ export function popTripReportTransfer(): TripExpenseRow[] {
   }
 }
 
-export function saveTripReportDraft(report: TripReport): void {
-  if (!isBrowser()) return;
+function readAllTripReports(): TripReport[] {
+  if (!isBrowser()) return [];
+  const raw = window.localStorage.getItem(REPORTS_KEY);
+  if (!raw) return [];
   try {
-    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(report));
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as TripReport[]) : [];
   } catch {
-    // 下書き保存できなくてもアプリ全体には影響させない
+    return [];
   }
 }
 
-export function loadTripReportDraft(): TripReport | null {
-  if (!isBrowser()) return null;
-  const raw = window.localStorage.getItem(DRAFT_KEY);
-  if (!raw) return null;
+function writeAllTripReports(reports: TripReport[]): void {
+  if (!isBrowser()) return;
   try {
-    return JSON.parse(raw) as TripReport;
+    window.localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
   } catch {
-    return null;
+    // 保存できなくてもアプリ全体には影響させない
   }
+}
+
+/** 保存済みの出張報告書を、更新日時の新しい順で返す。 */
+export function listTripReports(): TripReport[] {
+  return [...readAllTripReports()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export function getTripReport(id: string): TripReport | null {
+  return readAllTripReports().find((r) => r.id === id) ?? null;
+}
+
+/** idが一致すれば更新、なければ新規追加する(自動保存用)。 */
+export function saveTripReport(report: TripReport): void {
+  const reports = readAllTripReports();
+  const index = reports.findIndex((r) => r.id === report.id);
+  if (index === -1) {
+    reports.push(report);
+  } else {
+    reports[index] = report;
+  }
+  writeAllTripReports(reports);
+}
+
+export function deleteTripReport(id: string): void {
+  writeAllTripReports(readAllTripReports().filter((r) => r.id !== id));
 }

@@ -22,6 +22,11 @@ export function organizationLabel(id: OrganizationId | null): string {
   return ORGANIZATIONS.find((o) => o.id === id)?.label ?? id;
 }
 
+/** 組織名(表示ラベル)からOrganizationIdを逆引きする。保存済みデータの編集読み込み用。 */
+export function organizationIdByLabel(label: string): OrganizationId | null {
+  return ORGANIZATIONS.find((o) => o.label === label)?.id ?? null;
+}
+
 /** 仕分けプルダウンの視認性向上のための、請求先ごとの色。青山学院大学陸上競技部(orgD)は緑。 */
 export const ORGANIZATION_COLORS: Record<OrganizationId, { bg: string; text: string }> = {
   exclude: { bg: "#f3f4f6", text: "#4b5563" },
@@ -37,6 +42,11 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   card: "カード",
   cash: "現金",
 };
+
+/** 表示ラベルからPaymentMethodを逆引きする。保存済みデータの編集読み込み用。 */
+export function paymentMethodByLabel(label: string): PaymentMethod {
+  return label === PAYMENT_METHOD_LABELS.cash ? "cash" : "card";
+}
 
 /** draft: 下書き保存 / final: 経費精算PDF出力とあわせて行う確定保存 */
 export type SaveStatus = "draft" | "final";
@@ -80,6 +90,8 @@ export interface TripExpenseRow {
 
 /** 出張報告書1件分のデータ */
 export interface TripReport {
+  id: string;
+  updatedAt: string; // ISO日時。一覧の並び替えに使う
   reportDate: string; // 右上の「日時」(報告書の発行日)
   applicantName: string; // 氏名
   tripDate: string; // 出張の「日時」

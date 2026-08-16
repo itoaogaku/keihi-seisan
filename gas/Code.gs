@@ -98,6 +98,12 @@ function doPost(e) {
     }
 
     var sheet = getOrCreateSheet();
+
+    if (payload.replaceSavedAt) {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      deleteRowsBySavedAt(sheet, ss.getSpreadsheetTimeZone(), payload.replaceSavedAt);
+    }
+
     var now = new Date();
 
     var rows = transactions.map(function (t) {
@@ -123,6 +129,23 @@ function doPost(e) {
     return jsonResponse({ status: "ok", saved: rows.length });
   } catch (err) {
     return jsonResponse({ status: "error", message: String(err && err.message ? err.message : err) });
+  }
+}
+
+/**
+ * 指定した保存日時(yyyy-MM-dd HH:mm:ss形式)と一致する行をすべて削除する。
+ * 一覧画面からの「編集」で再保存する際、古い行を残さず置き換えるために使う。
+ */
+function deleteRowsBySavedAt(sheet, tz, targetSavedAt) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = values.length - 1; i >= 0; i--) {
+    var cellSavedAt = formatDateCell(values[i][0], tz, "yyyy-MM-dd HH:mm:ss");
+    if (cellSavedAt === targetSavedAt) {
+      sheet.deleteRow(2 + i);
+    }
   }
 }
 

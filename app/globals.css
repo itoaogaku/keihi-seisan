@@ -42,3 +42,10 @@
   width: 794px;
   background: #ffffff;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

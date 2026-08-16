@@ -6,6 +6,8 @@ export interface SavePayload {
   issueDate: string;
   status: SaveStatus;
   statusLabel: string;
+  /** 編集元の保存日時。指定すると、GAS側で同じ保存日時の既存行を削除してから保存し直す(上書き編集用)。 */
+  replaceSavedAt?: string;
   transactions: Array<{
     date: string;
     description: string;
@@ -58,13 +60,14 @@ async function parseGasResponse(response: Response): Promise<GasResponse> {
 
 export function buildSavePayload(
   transactions: Transaction[],
-  meta: { issueDate: string; status: SaveStatus }
+  meta: { issueDate: string; status: SaveStatus; replaceSavedAt?: string }
 ): SavePayload {
   return {
     savedAt: new Date().toISOString(),
     issueDate: meta.issueDate,
     status: meta.status,
     statusLabel: SAVE_STATUS_LABELS[meta.status],
+    replaceSavedAt: meta.replaceSavedAt,
     transactions: transactions
       .filter((t) => t.organization && t.organization !== "exclude")
       .map((t) => ({

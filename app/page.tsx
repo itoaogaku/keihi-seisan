@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, ChevronRight, Download, Plane, Plus, RefreshCw, Settings } from "lucide-react";
-import type { HistoryRecord } from "@/lib/types";
-import { getGasUrl } from "@/lib/storage";
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Pencil,
+  Plane,
+  Plus,
+  RefreshCw,
+  Settings,
+} from "lucide-react";
+import type { HistoryRecord, Transaction } from "@/lib/types";
+import { organizationIdByLabel, paymentMethodByLabel } from "@/lib/types";
+import { getGasUrl, pushEditBuffer } from "@/lib/storage";
 import { fetchHistory, GasClientError } from "@/lib/gas-client";
 import { exportHistoryToCsv } from "@/lib/csv-export";
 
@@ -52,6 +63,7 @@ function groupIntoEntries(records: HistoryRecord[]): HistoryEntry[] {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [gasUrlConfigured, setGasUrlConfigured] = useState(true);
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,6 +124,22 @@ export default function HomePage() {
       filteredRecords,
       `経費精算_保存履歴_${new Date().toISOString().slice(0, 10)}.csv`
     );
+  }
+
+  /** 保存済みのエントリを/newに読み込んで編集できるようにする。再保存時は元の行を置き換える。 */
+  function handleEdit(entry: HistoryEntry) {
+    const transactions: Transaction[] = entry.records.map((r) => ({
+      id: crypto.randomUUID(),
+      date: r.date,
+      description: r.description,
+      amount: Number(r.amount) || 0,
+      organization: organizationIdByLabel(r.organization),
+      memo: r.memo,
+      paymentMethod: paymentMethodByLabel(r.paymentMethod),
+    }));
+
+    pushEditBuffer({ transactions, issueDate: entry.issueDate, savedAt: entry.savedAt });
+    router.push("/new");
   }
 
   return (
@@ -221,26 +249,41 @@ export default function HomePage() {
                 const isExpanded = expandedSavedAt === entry.savedAt;
                 return (
                   <div key={entry.savedAt} className="rounded-md border border-border">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedSavedAt(isExpanded ? null : entry.savedAt)}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      )}
-                      <Badge variant={entry.status === "発行済み" ? "success" : "outline"}>
-                        {entry.status}
-                      </Badge>
-                      <span className="text-sm font-medium">発行日: {entry.issueDate}</span>
-                      <span className="text-xs text-muted-foreground">{entry.records.length}件</span>
-                      <span className="ml-auto font-semibold">{yen(entry.total)}</span>
-                      <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
-                        {entry.savedAt}
-                      </span>
-                    </button>
+                    <div className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setExpandedSavedAt(isExpanded ? null : entry.savedAt)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedSavedAt(isExpanded ? null : entry.savedAt);
+                          }
+                        }}
+                        className="flex flex-1 cursor-pointer items-center gap-3 text-left"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        )}
+                        <Badge variant={entry.status === "発行済み" ? "success" : "outline"}>
+                          {entry.status}
+                        </Badge>
+                        <span className="text-sm font-medium">発行日: {entry.issueDate}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {entry.records.length}件
+                        </span>
+                        <span className="ml-auto font-semibold">{yen(entry.total)}</span>
+                        <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
+                          {entry.savedAt}
+                        </span>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        編集
+                      </Button>
+                    </div>
                     {isExpanded && (
                       <div className="border-t border-border px-4 py-3">
                         <Table>
