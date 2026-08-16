@@ -38,11 +38,11 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "現金",
 };
 
-/** draft: スプレッドシートへの一時保存 / final: 経費精算PDF出力とあわせて行う確定保存 */
+/** draft: 下書き保存 / final: 経費精算PDF出力とあわせて行う確定保存 */
 export type SaveStatus = "draft" | "final";
 
 export const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
-  draft: "一時保存",
+  draft: "下書き",
   final: "確定",
 };
 

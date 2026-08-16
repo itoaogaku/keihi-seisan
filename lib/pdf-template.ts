@@ -23,7 +23,10 @@ export interface PdfMeta {
 export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): string {
   const { grandTotal, byOrganization } = result;
 
-  const orgRows = byOrganization
+  // PDF上では、金額が0円の請求先組織は内訳に表示しない
+  const nonZeroOrganizations = byOrganization.filter((org) => org.total !== 0);
+
+  const orgRows = nonZeroOrganizations
     .map(
       (org) => `
       <tr>
@@ -75,7 +78,7 @@ export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): stri
           <th style="${headStyle} text-align:right;">金額</th>
         </tr>
       </thead>
-      <tbody>${orgRows}</tbody>
+      <tbody>${orgRows || emptyOrgRow}</tbody>
     </table>
 
     <h2 style="font-size:14px; margin:0 0 8px 0;">明細一覧</h2>
@@ -108,6 +111,7 @@ const detailHeadStyle =
 const cellStyle = "padding:8px; border-bottom:1px solid #e5e7eb;";
 const detailCellStyle = "padding:5px 8px; border-bottom:1px solid #eef0f2;";
 const emptyRow = `<tr><td colspan="6" style="${detailCellStyle} text-align:center; color:#888;">明細がありません</td></tr>`;
+const emptyOrgRow = `<tr><td colspan="3" style="${cellStyle} text-align:center; color:#888;">明細がありません</td></tr>`;
 
 function escapeHtml(value: string): string {
   return value

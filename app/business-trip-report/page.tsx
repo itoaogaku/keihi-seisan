@@ -16,14 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import type { TripExpenseRow, TripReport } from "@/lib/types";
+import { ArrowLeft, Plus, Search, Trash2 } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import type { HistoryRecord, TripExpenseRow, TripReport } from "@/lib/types";
 import {
   loadTripReportDraft,
   popTripReportTransfer,
   saveTripReportDraft,
 } from "@/lib/trip-report-storage";
 import { generateTripReportPdf } from "@/lib/trip-report-pdf";
+import { getGasUrl } from "@/lib/storage";
+import { fetchHistory, GasClientError } from "@/lib/gas-client";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -45,12 +48,26 @@ function yen(amount: number): string {
   return `¥${(Number(amount) || 0).toLocaleString("ja-JP")}`;
 }
 
+function defaultSearchStart(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function BusinessTripReportPage() {
   const [report, setReport] = useState<TripReport>(emptyReport);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(
     null
   );
+
+  const [searchStart, setSearchStart] = useState(defaultSearchStart);
+  const [searchEnd, setSearchEnd] = useState(today);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<HistoryRecord[]>([]);
+  const [searchChecked, setSearchChecked] = useState<Set<number>>(new Set());
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // popTripReportTransfer()はlocalStorageを消費する副作用のため、
   // React 18 の開発モードによるeffect二重実行で2回走ると転記内容が失われる。
@@ -106,6 +123,63 @@ export default function BusinessTripReportPage() {
     setReport((prev) => ({ ...prev, expenses: prev.expenses.filter((e) => e.id !== id) }));
   }
 
+  /** 指定期間の保存済み明細を検索し、ポップアップで選択できるようにする。 */
+  async function handleSearch() {
+    setSearchError(null);
+    const gasUrl = getGasUrl();
+    if (!gasUrl) {
+      setSearchError("GAS WebアプリURLが未設定です。「設定」画面で登録してください。");
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const records = await fetchHistory(gasUrl);
+      const filtered = records
+        .filter((r) => r.date >= searchStart && r.date <= searchEnd)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      setSearchResults(filtered);
+      setSearchChecked(new Set());
+      setSearchOpen(true);
+    } catch (err) {
+      setSearchError(err instanceof GasClientError ? err.message : "検索に失敗しました。");
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function toggleSearchChecked(index: number) {
+    setSearchChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
+
+  function handleAddSelectedFromSearch() {
+    const selected = searchResults.filter((_, i) => searchChecked.has(i));
+    if (selected.length === 0) return;
+    setReport((prev) => ({
+      ...prev,
+      expenses: [
+        ...prev.expenses,
+        ...selected.map((r) => ({
+          id: crypto.randomUUID(),
+          date: r.date,
+          description: r.description,
+          amount: Number(r.amount) || 0,
+          note: r.memo || "",
+        })),
+      ],
+    }));
+    setSearchOpen(false);
+    setSearchResults([]);
+    setSearchChecked(new Set());
+  }
+
   async function handleGeneratePdf() {
     setStatus(null);
     setBusy(true);
@@ -134,7 +208,8 @@ export default function BusinessTripReportPage() {
         </Link>
         <h1 className="text-2xl font-bold">出張報告書</h1>
         <p className="text-sm text-muted-foreground">
-          経費精算PDF作成画面でチェックした明細を、下の出張経費欄に転記できます。
+          経費精算PDF作成画面でチェックした明細を転記するか、出張経費欄で期間を指定して
+          保存済みの明細を検索・追加できます。
         </p>
       </header>
 
@@ -220,6 +295,41 @@ export default function BusinessTripReportPage() {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="search-start" className="text-xs">
+                開始日
+              </Label>
+              <Input
+                id="search-start"
+                type="date"
+                className="h-9 w-40"
+                value={searchStart}
+                onChange={(e) => setSearchStart(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="search-end" className="text-xs">
+                終了日
+              </Label>
+              <Input
+                id="search-end"
+                type="date"
+                className="h-9 w-40"
+                value={searchEnd}
+                onChange={(e) => setSearchEnd(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => void handleSearch()} disabled={searchLoading}>
+              <Search className="mr-2 h-4 w-4" />
+              {searchLoading ? "検索中..." : "過去の明細を検索"}
+            </Button>
+          </div>
+          {searchError && (
+            <Alert variant="destructive" className="mb-4">
+              {searchError}
+            </Alert>
+          )}
           {report.expenses.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               経費がありません。「行を追加」で手入力するか、経費精算PDF作成画面で明細をチェックして転記してください。
@@ -294,6 +404,63 @@ export default function BusinessTripReportPage() {
           {busy ? "PDF作成中..." : "出張報告書のPDFを出力"}
         </Button>
       </div>
+
+      <Dialog
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        title="過去の明細から追加"
+        description={`${searchStart} 〜 ${searchEnd} の明細です。追加する項目にチェックしてください。`}
+      >
+        {searchResults.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            この期間の明細はありません。
+          </p>
+        ) : (
+          <>
+            <div className="max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10" />
+                    <TableHead className="w-24">利用日</TableHead>
+                    <TableHead className="w-48">請求先組織</TableHead>
+                    <TableHead>内容</TableHead>
+                    <TableHead className="w-28 text-right">金額</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={searchChecked.has(i)}
+                          onChange={() => toggleSearchChecked(i)}
+                          aria-label="この明細を選択"
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {r.date}
+                      </TableCell>
+                      <TableCell>{r.organization}</TableCell>
+                      <TableCell>{r.description}</TableCell>
+                      <TableCell className="text-right font-medium">{yen(r.amount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4 flex justify-end gap-3">
+              <Button variant="outline" size="sm" onClick={() => setSearchOpen(false)}>
+                キャンセル
+              </Button>
+              <Button size="sm" onClick={handleAddSelectedFromSearch} disabled={searchChecked.size === 0}>
+                選択した{searchChecked.size}件を追加
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 }
