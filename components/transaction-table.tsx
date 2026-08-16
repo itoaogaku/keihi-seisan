@@ -125,7 +125,7 @@ export function TransactionTable({
                 />
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">{t.date}</TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap">
                 <Badge variant={t.paymentMethod === "cash" ? "outline" : "secondary"}>
                   {PAYMENT_METHOD_LABELS[t.paymentMethod]}
                 </Badge>

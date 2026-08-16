@@ -448,7 +448,7 @@ export default function TripReportEditorPage() {
         onClose={() => setSearchOpen(false)}
         title="過去の明細から追加"
         description={`${searchStart} 〜 ${searchEnd} の明細です。追加する項目にチェックしてください。`}
-        className="max-w-5xl"
+        className="max-w-4xl"
       >
         {searchResults.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -462,7 +462,7 @@ export default function TripReportEditorPage() {
                   <TableRow>
                     <TableHead className="w-10" />
                     <TableHead className="w-24">利用日</TableHead>
-                    <TableHead className="w-64">請求先組織</TableHead>
+                    <TableHead className="w-48">請求先組織</TableHead>
                     <TableHead>内容</TableHead>
                     <TableHead>メモ</TableHead>
                     <TableHead className="w-28 text-right">金額</TableHead>
@@ -482,7 +482,7 @@ export default function TripReportEditorPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {r.date}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{r.organization}</TableCell>
+                      <TableCell>{r.organization}</TableCell>
                       <TableCell>{r.description}</TableCell>
                       <TableCell className="text-muted-foreground">{r.memo}</TableCell>
                       <TableCell className="text-right font-medium">{yen(r.amount)}</TableCell>
