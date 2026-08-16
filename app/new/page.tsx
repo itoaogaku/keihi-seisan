@@ -29,6 +29,11 @@ import { pushTripReportTransfer } from "@/lib/trip-report-storage";
 
 const defaultIssueDate = new Date().toISOString().slice(0, 10);
 
+/** 利用日+内容を、精算済み明細との重複チェック用のキーにする。 */
+function duplicateKey(date: string, description: string): string {
+  return `${date}|${description.trim()}`;
+}
+
 export default function NewEntryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -40,6 +45,7 @@ export default function NewEntryPage() {
     null
   );
   const [historyMemoMap, setHistoryMemoMap] = useState<Record<string, string>>({});
+  const [settledKeys, setSettledKeys] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingSavedAt, setEditingSavedAt] = useState<string | null>(null);
 
@@ -73,6 +79,16 @@ export default function NewEntryPage() {
           }
         }
         setHistoryMemoMap(map);
+
+        // 発行済み(確定済み)の明細と同じ日付・内容のものを、取り込み時の重複候補として警告表示する。
+        // 編集中のエントリ自身(replaceSavedAt対象)は重複扱いにしない。
+        const settled = new Set<string>();
+        for (const r of records) {
+          if (r.status === "発行済み" && r.savedAt !== editBuffer?.savedAt) {
+            settled.add(duplicateKey(r.date, r.description));
+          }
+        }
+        setSettledKeys(settled);
       })
       .catch(() => {
         // 履歴が取得できなくてもメモの自動反映を諦めるだけで、アプリ全体には影響させない
@@ -96,10 +112,17 @@ export default function NewEntryPage() {
 
   function handleImport(imported: Transaction[], skippedRows: number) {
     setTransactions((prev) => [...prev, ...imported.map(withHistoricalMemo)]);
+    const duplicateCount = imported.filter((t) =>
+      settledKeys.has(duplicateKey(t.date, t.description))
+    ).length;
     setStatus({
-      type: "success",
+      type: duplicateCount > 0 ? "error" : "success",
       message: `${imported.length}件を取り込みました。${
         skippedRows > 0 ? `(${skippedRows}件は形式を認識できず読み飛ばしました)` : ""
+      }${
+        duplicateCount > 0
+          ? ` ⚠${duplicateCount}件は精算済みの明細と日付・内容が一致しています。一覧で「精算済み?」マークをご確認ください。`
+          : ""
       }`,
     });
   }
@@ -326,6 +349,7 @@ export default function NewEntryPage() {
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onToggleSelectAll={handleToggleSelectAll}
+            settledKeys={settledKeys}
           />
           {selectedIds.size > 0 && (
             <div className="flex items-center justify-end">

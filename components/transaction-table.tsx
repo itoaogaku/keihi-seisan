@@ -25,10 +25,16 @@ interface TransactionTableProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[], checked: boolean) => void;
+  /** 「発行日|内容」のキー集合。一致する明細は精算済みとの重複候補として警告表示する。 */
+  settledKeys?: Set<string>;
 }
 
 function yen(amount: number): string {
   return `¥${amount.toLocaleString("ja-JP")}`;
+}
+
+function duplicateKey(date: string, description: string): string {
+  return `${date}|${description.trim()}`;
 }
 
 export function TransactionTable({
@@ -39,6 +45,7 @@ export function TransactionTable({
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
+  settledKeys,
 }: TransactionTableProps) {
   const [onlyUnclassified, setOnlyUnclassified] = useState(false);
 
@@ -103,8 +110,12 @@ export function TransactionTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visible.map((t) => (
-            <TableRow key={t.id}>
+          {visible.map((t) => {
+            const isDuplicate = Boolean(
+              settledKeys?.has(duplicateKey(t.date, t.description))
+            );
+            return (
+            <TableRow key={t.id} className={isDuplicate ? "bg-amber-50" : undefined}>
               <TableCell>
                 <input
                   type="checkbox"
@@ -119,7 +130,19 @@ export function TransactionTable({
                   {PAYMENT_METHOD_LABELS[t.paymentMethod]}
                 </Badge>
               </TableCell>
-              <TableCell>{t.description}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1.5">
+                  <span>{t.description}</span>
+                  {isDuplicate && (
+                    <Badge
+                      className="border-amber-400 bg-amber-100 text-amber-800"
+                      title="同じ利用日・内容の精算済み(発行済み)の明細が履歴にあります"
+                    >
+                      精算済み?
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
               <TableCell className="text-right font-medium">{yen(t.amount)}</TableCell>
               <TableCell>
                 <Input
@@ -173,7 +196,8 @@ export function TransactionTable({
                 </Button>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>
