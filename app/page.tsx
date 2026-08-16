@@ -339,8 +339,8 @@ export default function HomePage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-24">利用日</TableHead>
-                              <TableHead className="w-16">方法</TableHead>
-                              <TableHead className="w-56">請求先組織</TableHead>
+                              <TableHead className="w-28">方法</TableHead>
+                              <TableHead className="w-72">請求先組織</TableHead>
                               <TableHead>内容</TableHead>
                               <TableHead>メモ</TableHead>
                               <TableHead className="w-28 text-right">金額</TableHead>
@@ -364,7 +364,7 @@ export default function HomePage() {
                                       {r.paymentMethod}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>{r.organization}</TableCell>
+                                  <TableCell className="whitespace-nowrap">{r.organization}</TableCell>
                                   <TableCell>{r.description}</TableCell>
                                   <TableCell className="text-muted-foreground">{r.memo}</TableCell>
                                   <TableCell className="text-right font-medium">
