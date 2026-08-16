@@ -53,3 +53,16 @@ export interface AggregationResult {
   grandTotal: number;
   byOrganization: OrganizationSummary[];
 }
+
+/** スプレッドシートに保存済みの明細1件(GASの一覧取得APIが返す形) */
+export interface HistoryRecord {
+  savedAt: string;
+  periodStart: string;
+  periodEnd: string;
+  date: string;
+  paymentMethod: string;
+  description: string;
+  memo: string;
+  amount: number;
+  organization: string;
+}

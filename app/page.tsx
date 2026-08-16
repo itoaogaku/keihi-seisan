@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { Settings } from "lucide-react";
+import { History, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { computePeriod, aggregateByOrganization, filterByPeriod } from "@/lib/aggregate";
 import {
@@ -146,12 +146,20 @@ export default function HomePage() {
             クレジットカード明細を仕分けして、組織ごとの経費精算PDFを作成します。
           </p>
         </div>
-        <Link href="/settings">
-          <Button variant="outline" size="sm">
-            <Settings className="mr-2 h-4 w-4" />
-            設定
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/history">
+            <Button variant="outline" size="sm">
+              <History className="mr-2 h-4 w-4" />
+              履歴
+            </Button>
+          </Link>
+          <Link href="/settings">
+            <Button variant="outline" size="sm">
+              <Settings className="mr-2 h-4 w-4" />
+              設定
+            </Button>
+          </Link>
+        </div>
       </header>
 
       {!gasUrlConfigured && (

@@ -24,7 +24,52 @@ var HEADER_ROW = [
 ];
 
 function doGet(e) {
+  var action = e && e.parameter ? e.parameter.action : null;
+
+  if (action === "list") {
+    return jsonResponse({ status: "ok", records: getAllRecords() });
+  }
+
   return jsonResponse({ status: "ok", service: "keihi-seisan", sheet: SHEET_NAME });
+}
+
+/**
+ * 保存済みの全明細をシートから読み出す(締め日等による絞り込みはしない)。
+ */
+function getAllRecords() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return [];
+  }
+
+  var tz = ss.getSpreadsheetTimeZone();
+  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADER_ROW.length).getValues();
+
+  return values.map(function (row) {
+    return {
+      savedAt: formatDateCell(row[0], tz, "yyyy-MM-dd HH:mm:ss"),
+      periodStart: formatDateCell(row[1], tz, "yyyy-MM-dd"),
+      periodEnd: formatDateCell(row[2], tz, "yyyy-MM-dd"),
+      date: formatDateCell(row[3], tz, "yyyy-MM-dd"),
+      paymentMethod: row[4],
+      description: row[5],
+      memo: row[6],
+      amount: row[7],
+      organization: row[8],
+    };
+  });
+}
+
+/**
+ * スプレッドシートが日付らしき文字列を自動でDate型に変換してしまうことがあるため、
+ * 読み出し時に一貫してこのタイムゾーンでの文字列表現に揃える。
+ */
+function formatDateCell(value, tz, pattern) {
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return Utilities.formatDate(value, tz, pattern);
+  }
+  return value;
 }
 
 function doPost(e) {

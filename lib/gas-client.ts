@@ -1,4 +1,4 @@
-import type { Transaction } from "./types";
+import type { HistoryRecord, Transaction } from "./types";
 import { organizationLabel, PAYMENT_METHOD_LABELS } from "./types";
 
 export interface SavePayload {
@@ -107,6 +107,34 @@ export async function saveTransactions(
     throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
   }
   return data;
+}
+
+/**
+ * これまでにスプレッドシートへ保存した明細を、締め日などによる絞り込みなしで
+ * 全件取得する(履歴タブ用)。
+ */
+export async function fetchHistory(gasUrl: string): Promise<HistoryRecord[]> {
+  assertValidUrl(gasUrl);
+
+  const url = new URL(gasUrl);
+  url.searchParams.set("action", "list");
+
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), { method: "GET" });
+  } catch (err) {
+    throw new GasClientError(
+      `GASへの接続に失敗しました。URLとデプロイ設定(アクセス:全員)を確認してください。(${
+        err instanceof Error ? err.message : String(err)
+      })`
+    );
+  }
+
+  const data = await parseGasResponse(response);
+  if (data.status !== "ok") {
+    throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
+  }
+  return Array.isArray(data.records) ? (data.records as HistoryRecord[]) : [];
 }
 
 export async function testConnection(gasUrl: string): Promise<GasResponse> {
