@@ -463,6 +463,7 @@ export default function TripReportEditorPage() {
                     <TableHead className="w-24">利用日</TableHead>
                     <TableHead className="w-48">請求先組織</TableHead>
                     <TableHead>内容</TableHead>
+                    <TableHead>メモ</TableHead>
                     <TableHead className="w-28 text-right">金額</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -482,6 +483,7 @@ export default function TripReportEditorPage() {
                       </TableCell>
                       <TableCell>{r.organization}</TableCell>
                       <TableCell>{r.description}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.memo}</TableCell>
                       <TableCell className="text-right font-medium">{yen(r.amount)}</TableCell>
                     </TableRow>
                   ))}
