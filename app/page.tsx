@@ -231,7 +231,7 @@ export default function HomePage() {
                       ) : (
                         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                       )}
-                      <Badge variant={entry.status === "確定" ? "success" : "outline"}>
+                      <Badge variant={entry.status === "発行済み" ? "success" : "outline"}>
                         {entry.status}
                       </Badge>
                       <span className="text-sm font-medium">発行日: {entry.issueDate}</span>

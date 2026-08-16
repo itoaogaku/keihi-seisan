@@ -49,14 +49,14 @@ function getAllRecords() {
   return values.map(function (row) {
     return {
       savedAt: formatDateCell(row[0], tz, "yyyy-MM-dd HH:mm:ss"),
-      status: row[1],
+      status: safeText(row[1]),
       issueDate: formatDateCell(row[2], tz, "yyyy-MM-dd"),
       date: formatDateCell(row[3], tz, "yyyy-MM-dd"),
-      paymentMethod: row[4],
-      description: row[5],
-      memo: row[6],
+      paymentMethod: safeText(row[4]),
+      description: safeText(row[5]),
+      memo: safeText(row[6]),
       amount: row[7],
-      organization: row[8],
+      organization: safeText(row[8]),
     };
   });
 }
@@ -68,6 +68,18 @@ function getAllRecords() {
 function formatDateCell(value, tz, pattern) {
   if (Object.prototype.toString.call(value) === "[object Date]") {
     return Utilities.formatDate(value, tz, pattern);
+  }
+  return value;
+}
+
+/**
+ * 過去の列構成で保存された行(例: 列の位置が異なる古いデータ)が混ざっていると、
+ * 本来は文字列であるべき列にDate型の値が入ってしまうことがある。
+ * そのままJSON化すると壊れた日時文字列として表示されてしまうため、空文字に置き換える。
+ */
+function safeText(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return "";
   }
   return value;
 }

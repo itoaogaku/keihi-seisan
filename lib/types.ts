@@ -43,7 +43,7 @@ export type SaveStatus = "draft" | "final";
 
 export const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
   draft: "下書き",
-  final: "確定",
+  final: "発行済み",
 };
 
 export interface Transaction {
