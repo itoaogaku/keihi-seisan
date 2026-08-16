@@ -11,7 +11,17 @@
  */
 
 var SHEET_NAME = "経費データ";
-var HEADER_ROW = ["保存日時", "対象期間開始", "対象期間終了", "利用日", "内容", "金額", "請求先組織"];
+var HEADER_ROW = [
+  "保存日時",
+  "対象期間開始",
+  "対象期間終了",
+  "利用日",
+  "支払方法",
+  "内容",
+  "メモ",
+  "金額",
+  "請求先組織",
+];
 
 function doGet(e) {
   return jsonResponse({ status: "ok", service: "keihi-seisan", sheet: SHEET_NAME });
@@ -40,7 +50,9 @@ function doPost(e) {
         period.start || "",
         period.end || "",
         t.date || "",
+        t.paymentMethodLabel || t.paymentMethod || "",
         t.description || "",
+        t.memo || "",
         Number(t.amount) || 0,
         t.organizationName || t.organization || "",
       ];

@@ -125,6 +125,8 @@ export function parseTransactionsFromText(text: string): ParseResult {
       description: rawDesc.trim(),
       amount,
       organization: null,
+      memo: "",
+      paymentMethod: "card",
     });
   }
 

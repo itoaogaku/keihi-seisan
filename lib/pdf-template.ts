@@ -1,4 +1,5 @@
 import type { AggregationResult } from "./types";
+import { PAYMENT_METHOD_LABELS } from "./types";
 
 function yen(amount: number): string {
   return `¥${amount.toLocaleString("ja-JP")}`;
@@ -40,7 +41,9 @@ export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): stri
         <tr>
           <td style="${detailCellStyle}">${formatDateJp(t.date)}</td>
           <td style="${detailCellStyle}">${escapeHtml(org.label)}</td>
+          <td style="${detailCellStyle}">${PAYMENT_METHOD_LABELS[t.paymentMethod]}</td>
           <td style="${detailCellStyle}">${escapeHtml(t.description)}</td>
+          <td style="${detailCellStyle}">${escapeHtml(t.memo || "-")}</td>
           <td style="${detailCellStyle} text-align:right;">${yen(t.amount)}</td>
         </tr>`
       )
@@ -83,7 +86,9 @@ export function buildSummaryHtml(result: AggregationResult, meta: PdfMeta): stri
         <tr>
           <th style="${detailHeadStyle}">利用日</th>
           <th style="${detailHeadStyle}">請求先組織</th>
+          <th style="${detailHeadStyle}">方法</th>
           <th style="${detailHeadStyle}">内容</th>
+          <th style="${detailHeadStyle}">メモ</th>
           <th style="${detailHeadStyle} text-align:right;">金額</th>
         </tr>
       </thead>
@@ -104,7 +109,7 @@ const detailHeadStyle =
   "text-align:left; padding:6px 8px; background:#e5e7eb; color:#1a1a1a; font-weight:600; border-bottom:1px solid #d1d5db;";
 const cellStyle = "padding:8px; border-bottom:1px solid #e5e7eb;";
 const detailCellStyle = "padding:5px 8px; border-bottom:1px solid #eef0f2;";
-const emptyRow = `<tr><td colspan="4" style="${detailCellStyle} text-align:center; color:#888;">対象期間内に明細がありません</td></tr>`;
+const emptyRow = `<tr><td colspan="6" style="${detailCellStyle} text-align:center; color:#888;">対象期間内に明細がありません</td></tr>`;
 
 function escapeHtml(value: string): string {
   return value

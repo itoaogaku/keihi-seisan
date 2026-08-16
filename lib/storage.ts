@@ -37,7 +37,17 @@ export function loadDraftTransactions(): Transaction[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Transaction[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    // 旧バージョンの下書き(memo/paymentMethod未対応)を読み込んだ場合の補完
+    return (parsed as Partial<Transaction>[]).map((t) => ({
+      id: t.id ?? crypto.randomUUID(),
+      date: t.date ?? "",
+      description: t.description ?? "",
+      amount: t.amount ?? 0,
+      organization: t.organization ?? null,
+      memo: t.memo ?? "",
+      paymentMethod: t.paymentMethod ?? "card",
+    }));
   } catch {
     return [];
   }

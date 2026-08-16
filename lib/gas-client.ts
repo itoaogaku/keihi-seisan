@@ -1,5 +1,5 @@
 import type { Transaction } from "./types";
-import { organizationLabel } from "./types";
+import { organizationLabel, PAYMENT_METHOD_LABELS } from "./types";
 
 export interface SavePayload {
   period: { start: string; end: string };
@@ -10,6 +10,9 @@ export interface SavePayload {
     amount: number;
     organization: string;
     organizationName: string;
+    memo: string;
+    paymentMethod: string;
+    paymentMethodLabel: string;
   }>;
 }
 
@@ -66,6 +69,9 @@ export function buildSavePayload(
         amount: t.amount,
         organization: t.organization as string,
         organizationName: organizationLabel(t.organization),
+        memo: t.memo,
+        paymentMethod: t.paymentMethod,
+        paymentMethodLabel: PAYMENT_METHOD_LABELS[t.paymentMethod],
       })),
   };
 }

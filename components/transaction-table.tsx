@@ -10,15 +10,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ORGANIZATIONS } from "@/lib/types";
+import { ORGANIZATIONS, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: Transaction[];
   onChangeOrganization: (id: string, organization: OrganizationId) => void;
+  onChangeMemo: (id: string, memo: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -29,6 +31,7 @@ function yen(amount: number): string {
 export function TransactionTable({
   transactions,
   onChangeOrganization,
+  onChangeMemo,
   onDelete,
 }: TransactionTableProps) {
   const [onlyUnclassified, setOnlyUnclassified] = useState(false);
@@ -70,8 +73,10 @@ export function TransactionTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-28">利用日</TableHead>
+            <TableHead className="w-16">方法</TableHead>
             <TableHead>内容</TableHead>
             <TableHead className="w-28 text-right">金額</TableHead>
+            <TableHead className="w-48">メモ</TableHead>
             <TableHead className="w-64">仕分け(請求先)</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -80,8 +85,21 @@ export function TransactionTable({
           {visible.map((t) => (
             <TableRow key={t.id}>
               <TableCell className="whitespace-nowrap text-muted-foreground">{t.date}</TableCell>
+              <TableCell>
+                <Badge variant={t.paymentMethod === "cash" ? "outline" : "secondary"}>
+                  {PAYMENT_METHOD_LABELS[t.paymentMethod]}
+                </Badge>
+              </TableCell>
               <TableCell>{t.description}</TableCell>
               <TableCell className="text-right font-medium">{yen(t.amount)}</TableCell>
+              <TableCell>
+                <Input
+                  value={t.memo}
+                  onChange={(e) => onChangeMemo(t.id, e.target.value)}
+                  placeholder="メモ"
+                  className="h-9"
+                />
+              </TableCell>
               <TableCell>
                 <Select
                   value={t.organization ?? ""}

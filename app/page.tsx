@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CsvUploader } from "@/components/csv-uploader";
+import { CashEntryForm } from "@/components/cash-entry-form";
 import { TransactionTable } from "@/components/transaction-table";
 import { PeriodSelector } from "@/components/period-selector";
 import { SummaryPanel } from "@/components/summary-panel";
@@ -78,6 +79,15 @@ export default function HomePage() {
     setTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, organization } : t))
     );
+  }
+
+  function handleChangeMemo(id: string, memo: string) {
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, memo } : t)));
+  }
+
+  function handleAddCashTransaction(transaction: Transaction) {
+    setTransactions((prev) => [...prev, transaction]);
+    setStatus({ type: "success", message: "現金決済を1件追加しました。" });
   }
 
   function handleDelete(id: string) {
@@ -162,6 +172,8 @@ export default function HomePage() {
 
       <CsvUploader onImport={handleImport} />
 
+      <CashEntryForm onAdd={handleAddCashTransaction} />
+
       <PeriodSelector
         closingDay={closingDay}
         onChangeClosingDay={setClosingDay}
@@ -182,6 +194,7 @@ export default function HomePage() {
           <TransactionTable
             transactions={transactions}
             onChangeOrganization={handleChangeOrganization}
+            onChangeMemo={handleChangeMemo}
             onDelete={handleDelete}
           />
         </CardContent>

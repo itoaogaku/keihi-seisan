@@ -22,12 +22,21 @@ export function organizationLabel(id: OrganizationId | null): string {
   return ORGANIZATIONS.find((o) => o.id === id)?.label ?? id;
 }
 
+export type PaymentMethod = "card" | "cash";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  card: "カード",
+  cash: "現金",
+};
+
 export interface Transaction {
   id: string;
   date: string; // ISO date (YYYY-MM-DD)
   description: string;
   amount: number;
   organization: OrganizationId | null;
+  memo: string;
+  paymentMethod: PaymentMethod;
 }
 
 export interface OrganizationSummary {
