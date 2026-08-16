@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { parseTransactionsFromText } from "@/lib/csv-parser";
+import { decodeCsvArrayBuffer } from "@/lib/encoding";
 import type { Transaction } from "@/lib/types";
 import { Upload } from "lucide-react";
 
@@ -17,7 +18,8 @@ export function CsvUploader({ onImport }: CsvUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
-    const text = await file.text();
+    const buffer = await file.arrayBuffer();
+    const text = decodeCsvArrayBuffer(buffer);
     const { transactions, skippedRows } = parseTransactionsFromText(text);
     onImport(transactions, skippedRows);
   }
