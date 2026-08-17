@@ -109,10 +109,16 @@ export function parseTransactionsFromText(text: string): ParseResult {
   for (const row of dataRows) {
     const rawDate = row[dateIdx] ?? "";
     const rawDesc = row[descIdx] ?? "";
-    const rawAmount = row[amountIdx] ?? "";
 
     const date = parseDate(rawDate);
-    const amount = parseAmount(rawAmount);
+    // 想定した列に金額がない場合(例: 「ご本人」「1回払い」など支払方法の列が
+    // 間に挟まる明細書式)は、その右側の列を順に走査して最初に数値として
+    // 解釈できた列を金額とみなす。
+    let amount: number | null = null;
+    for (let col = amountIdx; col < row.length; col += 1) {
+      amount = parseAmount(row[col] ?? "");
+      if (amount !== null) break;
+    }
 
     if (!date || amount === null || rawDesc.trim() === "") {
       skippedRows += 1;
