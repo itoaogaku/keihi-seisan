@@ -21,7 +21,10 @@ export function CsvUploader({ onImport }: CsvUploaderProps) {
     const buffer = await file.arrayBuffer();
     const text = decodeCsvArrayBuffer(buffer);
     const { transactions, skippedRows } = parseTransactionsFromText(text);
-    onImport(transactions, skippedRows);
+    onImport(
+      transactions.map((t) => ({ ...t, sourceFile: file.name })),
+      skippedRows
+    );
   }
 
   function handlePasteImport() {

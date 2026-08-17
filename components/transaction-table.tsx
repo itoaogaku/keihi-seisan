@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ORGANIZATIONS, ORGANIZATION_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { OrganizationId, Transaction } from "@/lib/types";
-import { Trash2 } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -142,6 +142,15 @@ export function TransactionTable({
                     </Badge>
                   )}
                 </div>
+                {t.sourceFile && (
+                  <div
+                    className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"
+                    title={`取り込み元ファイル: ${t.sourceFile}`}
+                  >
+                    <FileText className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{t.sourceFile}</span>
+                  </div>
+                )}
               </TableCell>
               <TableCell className="text-right font-medium">{yen(t.amount)}</TableCell>
               <TableCell>

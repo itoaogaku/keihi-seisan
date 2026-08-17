@@ -64,6 +64,8 @@ export interface Transaction {
   organization: OrganizationId | null;
   memo: string;
   paymentMethod: PaymentMethod;
+  /** CSVファイルから取り込んだ場合の、取り込み元ファイル名(手入力・貼り付けの場合は未設定)。 */
+  sourceFile?: string;
 }
 
 export interface OrganizationSummary {
