@@ -51,6 +51,28 @@ interface HistoryEntry {
   billableCount: number;
 }
 
+/**
+ * カード決済は、CSV取り込み由来(sourceFileあり)か手入力(sourceFileなし)かで
+ * 見た目を分ける。現金は常に手入力のため区別不要。
+ */
+function paymentBadge(r: HistoryRecord): {
+  label: string;
+  variant: "outline" | "secondary";
+  className?: string;
+} {
+  if (r.paymentMethod === "現金") {
+    return { label: r.paymentMethod, variant: "outline" };
+  }
+  if (!r.sourceFile) {
+    return {
+      label: "カード(手入力)",
+      variant: "outline",
+      className: "border-blue-300 bg-blue-50 text-blue-700",
+    };
+  }
+  return { label: r.paymentMethod, variant: "secondary" };
+}
+
 function yen(amount: number): string {
   return `¥${(Number(amount) || 0).toLocaleString("ja-JP")}`;
 }
@@ -344,7 +366,7 @@ export default function HomePage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-24">利用日</TableHead>
-                              <TableHead className="w-24">方法</TableHead>
+                              <TableHead className="w-32">方法</TableHead>
                               <TableHead className="w-48">請求先組織</TableHead>
                               <TableHead>内容</TableHead>
                               <TableHead>メモ</TableHead>
@@ -363,11 +385,14 @@ export default function HomePage() {
                                     {r.date}
                                   </TableCell>
                                   <TableCell className="whitespace-nowrap">
-                                    <Badge
-                                      variant={r.paymentMethod === "現金" ? "outline" : "secondary"}
-                                    >
-                                      {r.paymentMethod}
-                                    </Badge>
+                                    {(() => {
+                                      const badge = paymentBadge(r);
+                                      return (
+                                        <Badge variant={badge.variant} className={badge.className}>
+                                          {badge.label}
+                                        </Badge>
+                                      );
+                                    })()}
                                   </TableCell>
                                   <TableCell>{r.organization}</TableCell>
                                   <TableCell>

@@ -38,6 +38,24 @@ function duplicateKey(date: string, description: string): string {
   return `${date}|${description.trim()}`;
 }
 
+/**
+ * カード決済は、CSV取り込み由来(sourceFileあり)か手入力(sourceFileなし)かで
+ * 見た目を分ける。現金は常に手入力のため区別不要。
+ */
+function paymentBadge(t: Transaction): { label: string; variant: "outline" | "secondary"; className?: string } {
+  if (t.paymentMethod === "cash") {
+    return { label: PAYMENT_METHOD_LABELS.cash, variant: "outline" };
+  }
+  if (!t.sourceFile) {
+    return {
+      label: "カード(手入力)",
+      variant: "outline",
+      className: "border-blue-300 bg-blue-50 text-blue-700",
+    };
+  }
+  return { label: PAYMENT_METHOD_LABELS.card, variant: "secondary" };
+}
+
 export function TransactionTable({
   transactions,
   onChangeOrganization,
@@ -109,7 +127,7 @@ export function TransactionTable({
               />
             </TableHead>
             <TableHead className="w-28">利用日</TableHead>
-            <TableHead className="w-16">方法</TableHead>
+            <TableHead className="w-32">方法</TableHead>
             <TableHead>内容</TableHead>
             <TableHead className="w-28 text-right">金額</TableHead>
             <TableHead className="w-48">メモ</TableHead>
@@ -134,9 +152,14 @@ export function TransactionTable({
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">{t.date}</TableCell>
               <TableCell className="whitespace-nowrap">
-                <Badge variant={t.paymentMethod === "cash" ? "outline" : "secondary"}>
-                  {PAYMENT_METHOD_LABELS[t.paymentMethod]}
-                </Badge>
+                {(() => {
+                  const badge = paymentBadge(t);
+                  return (
+                    <Badge variant={badge.variant} className={badge.className}>
+                      {badge.label}
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-1.5">
