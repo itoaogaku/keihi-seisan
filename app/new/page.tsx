@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CsvUploader } from "@/components/csv-uploader";
-import { CashEntryForm } from "@/components/cash-entry-form";
+import { ManualEntryForm } from "@/components/manual-entry-form";
 import { TransactionTable } from "@/components/transaction-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -184,9 +184,13 @@ export default function NewEntryPage() {
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, memo } : t)));
   }
 
-  function handleAddCashTransaction(transaction: Transaction) {
+  function handleAddManualTransaction(transaction: Transaction) {
     setTransactions((prev) => [...prev, withHistoricalDefaults(transaction)]);
-    setStatus({ type: "success", message: "現金決済を1件追加しました。" });
+    setStatus({ type: "success", message: "決済を1件追加しました。" });
+  }
+
+  function handleSortByDate() {
+    setTransactions((prev) => [...prev].sort((a, b) => a.date.localeCompare(b.date)));
   }
 
   function handleDelete(id: string) {
@@ -395,7 +399,7 @@ export default function NewEntryPage() {
         <>
           <CsvUploader onImport={handleImport} importedFiles={importedFileNames} />
 
-          <CashEntryForm onAdd={handleAddCashTransaction} />
+          <ManualEntryForm onAdd={handleAddManualTransaction} />
 
           <Card>
             <CardHeader>
@@ -412,6 +416,7 @@ export default function NewEntryPage() {
                 onChangeOrganization={handleChangeOrganization}
                 onChangeMemo={handleChangeMemo}
                 onDelete={handleDelete}
+                onSortByDate={handleSortByDate}
                 selectedIds={selectedIds}
                 onToggleSelect={handleToggleSelect}
                 onToggleSelectAll={handleToggleSelectAll}

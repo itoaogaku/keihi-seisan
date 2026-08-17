@@ -15,13 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ORGANIZATIONS, ORGANIZATION_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { OrganizationId, Transaction } from "@/lib/types";
-import { Trash2 } from "lucide-react";
+import { ArrowUpDown, Trash2 } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: Transaction[];
   onChangeOrganization: (id: string, organization: OrganizationId) => void;
   onChangeMemo: (id: string, memo: string) => void;
   onDelete: (id: string) => void;
+  onSortByDate: () => void;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[], checked: boolean) => void;
@@ -42,6 +43,7 @@ export function TransactionTable({
   onChangeOrganization,
   onChangeMemo,
   onDelete,
+  onSortByDate,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -75,13 +77,19 @@ export function TransactionTable({
             <Badge variant="destructive">未仕分け {unclassifiedCount}件</Badge>
           )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setOnlyUnclassified((v) => !v)}
-        >
-          {onlyUnclassified ? "すべて表示" : "未仕分けのみ表示"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onSortByDate}>
+            <ArrowUpDown className="mr-2 h-4 w-4" />
+            日付順に並び替え
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOnlyUnclassified((v) => !v)}
+          >
+            {onlyUnclassified ? "すべて表示" : "未仕分けのみ表示"}
+          </Button>
+        </div>
       </div>
 
       <Table>

@@ -19,17 +19,17 @@ export function SummaryPanel({ result }: { result: AggregationResult }) {
           <span className="text-sm font-medium">合計請求額</span>
           <span className="text-2xl font-bold">{yen(result.grandTotal)}</span>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
           {result.byOrganization.map((org) => (
             <div
               key={org.organization}
-              className="flex items-center justify-between rounded-md border border-border px-4 py-3"
+              className="flex items-center justify-between gap-4 rounded-md border border-border px-4 py-3"
             >
-              <div>
-                <p className="text-sm font-medium">{org.label}</p>
-                <p className="text-xs text-muted-foreground">{org.count}件</p>
+              <div className="flex min-w-0 items-baseline gap-2">
+                <p className="truncate text-sm font-medium">{org.label}</p>
+                <p className="shrink-0 text-xs text-muted-foreground">{org.count}件</p>
               </div>
-              <p className="font-semibold">{yen(org.total)}</p>
+              <p className="shrink-0 font-semibold">{yen(org.total)}</p>
             </div>
           ))}
         </div>
