@@ -327,14 +327,14 @@ export default function NewEntryPage() {
           <ArrowLeft className="h-4 w-4" />
           一覧に戻る
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">経費精算PDF作成</h1>
             <p className="text-sm text-muted-foreground">
               クレジットカード明細を仕分けして、組織ごとの経費精算PDFを作成します。
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/business-trip-report">
               <Button variant="outline" size="sm">
                 <Plane className="mr-2 h-4 w-4" />
@@ -375,7 +375,7 @@ export default function NewEntryPage() {
 
       {previewOpen ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="outline" onClick={() => setPreviewOpen(false)} disabled={busy !== null}>
               <Pencil className="mr-2 h-4 w-4" />
               編集に戻る

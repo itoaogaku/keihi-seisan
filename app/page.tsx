@@ -208,14 +208,14 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">経費精算</h1>
           <p className="text-sm text-muted-foreground">
             保存済みの経費精算データの一覧です。クリックすると明細を確認できます。
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/business-trip-report">
             <Button variant="outline" size="sm">
               <Plane className="mr-2 h-4 w-4" />
@@ -250,7 +250,7 @@ export default function HomePage() {
       {error && <Alert variant="destructive">{error}</Alert>}
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
           <div>
             <CardTitle>一覧</CardTitle>
             <CardDescription>
@@ -263,7 +263,7 @@ export default function HomePage() {
               )}
             </CardDescription>
           </div>
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             {issueDates.length > 0 && (
               <div className="space-y-1.5">
                 <Label htmlFor="issue-date-filter" className="text-xs">
@@ -313,7 +313,7 @@ export default function HomePage() {
                 const isExpanded = expandedSavedAt === entry.savedAt;
                 return (
                   <div key={entry.savedAt} className="rounded-md border border-border">
-                    <div className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50">
+                    <div className="flex w-full flex-wrap items-center gap-3 px-4 py-3 hover:bg-muted/50">
                       <div
                         role="button"
                         tabIndex={0}
@@ -324,7 +324,7 @@ export default function HomePage() {
                             setExpandedSavedAt(isExpanded ? null : entry.savedAt);
                           }
                         }}
-                        className="flex flex-1 cursor-pointer items-center gap-3 text-left"
+                        className="flex min-w-0 flex-1 flex-wrap cursor-pointer items-center gap-x-3 gap-y-1 text-left"
                       >
                         {isExpanded ? (
                           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -340,25 +340,27 @@ export default function HomePage() {
                           {entry.records.length > entry.billableCount &&
                             `(除外・精算済み${entry.records.length - entry.billableCount}件)`}
                         </span>
-                        <span className="ml-auto font-semibold">{yen(entry.total)}</span>
-                        <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
+                        <span className="ml-auto font-semibold sm:ml-0">{yen(entry.total)}</span>
+                        <span className="hidden shrink-0 text-right text-xs text-muted-foreground sm:inline sm:w-36">
                           {entry.savedAt}
                         </span>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        編集
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void handleDelete(entry)}
-                        disabled={deletingSavedAt === entry.savedAt}
-                        aria-label="このデータを削除"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {deletingSavedAt === entry.savedAt ? "削除中..." : "削除"}
-                      </Button>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          編集
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void handleDelete(entry)}
+                          disabled={deletingSavedAt === entry.savedAt}
+                          aria-label="このデータを削除"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {deletingSavedAt === entry.savedAt ? "削除中..." : "削除"}
+                        </Button>
+                      </div>
                     </div>
                     {isExpanded && (
                       <div className="border-t border-border px-4 py-3">
@@ -394,7 +396,7 @@ export default function HomePage() {
                                       );
                                     })()}
                                   </TableCell>
-                                  <TableCell>{r.organization}</TableCell>
+                                  <TableCell className="whitespace-nowrap">{r.organization}</TableCell>
                                   <TableCell>
                                     <div>{r.description}</div>
                                     {r.sourceFile && (

@@ -88,14 +88,14 @@ export function TransactionTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm">
           <span>全{transactions.length}件</span>
           {unclassifiedCount > 0 && (
             <Badge variant="destructive">未仕分け {unclassifiedCount}件</Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={onSortByDate}>
             <ArrowUpDown className="mr-2 h-4 w-4" />
             日付順に並び替え

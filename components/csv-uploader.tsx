@@ -30,7 +30,7 @@ export function CsvUploader({ onImport, importedFiles = [] }: CsvUploaderProps) 
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between space-y-0">
+      <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:justify-between sm:space-y-0">
         <div>
           <CardTitle>1. 明細の取り込み</CardTitle>
           <CardDescription>
@@ -38,7 +38,7 @@ export function CsvUploader({ onImport, importedFiles = [] }: CsvUploaderProps) 
           </CardDescription>
         </div>
         {importedFiles.length > 0 && (
-          <div className="flex flex-wrap justify-end gap-1">
+          <div className="flex flex-wrap gap-1 sm:justify-end">
             {importedFiles.map((f) => (
               <Badge key={f} variant="secondary" className="whitespace-nowrap">
                 {f} 読み込み済み

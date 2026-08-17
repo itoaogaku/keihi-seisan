@@ -267,7 +267,7 @@ export default function TripReportEditorPage() {
           <ArrowLeft className="h-4 w-4" />
           出張報告書一覧に戻る
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">出張報告書</h1>
             <p className="text-sm text-muted-foreground">
@@ -276,7 +276,7 @@ export default function TripReportEditorPage() {
               WebアプリURLを設定していればスプレッドシートにも保存されます。
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleDeleteReport}>
+          <Button variant="ghost" size="sm" onClick={handleDeleteReport} className="self-start sm:self-auto">
             <Trash2 className="mr-2 h-4 w-4" />
             削除
           </Button>
@@ -285,7 +285,7 @@ export default function TripReportEditorPage() {
 
       {previewOpen ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between print:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>
               <Pencil className="mr-2 h-4 w-4" />
               編集に戻る
@@ -384,7 +384,7 @@ export default function TripReportEditorPage() {
           </Card>
 
           <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div>
                 <CardTitle>出張経費</CardTitle>
                 <CardDescription>
@@ -556,7 +556,7 @@ export default function TripReportEditorPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {r.date}
                       </TableCell>
-                      <TableCell>{r.organization}</TableCell>
+                      <TableCell className="whitespace-nowrap">{r.organization}</TableCell>
                       <TableCell>{r.description}</TableCell>
                       <TableCell className="text-muted-foreground">{r.memo}</TableCell>
                       <TableCell className="text-right font-medium">{yen(r.amount)}</TableCell>
