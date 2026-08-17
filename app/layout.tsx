@@ -1,10 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppHeader } from "@/components/app-header";
 
 export const metadata: Metadata = {
   title: "経費精算PDF作成",
   description: "クレジットカード明細から会社ごとの経費精算PDFを作成するツール",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "経費精算",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7c3aed",
 };
 
 export default function RootLayout({
