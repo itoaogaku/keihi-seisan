@@ -107,6 +107,7 @@ export interface TripReport {
   location: string; // 場所
   purpose: string; // 目的
   content: string; // 報告内容
+  memo: string; // 社内用メモ(PDF出力には含めない)
   expenses: TripExpenseRow[];
 }
 

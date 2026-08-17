@@ -24,11 +24,29 @@ var HEADER_ROW = [
   "取込ファイル",
 ];
 
+var TRIP_REPORT_SHEET_NAME = "出張報告書データ";
+var TRIP_REPORT_HEADER_ROW = [
+  "ID",
+  "更新日時",
+  "発行日",
+  "氏名",
+  "出張日",
+  "場所",
+  "目的",
+  "報告内容",
+  "メモ",
+  "出張経費(JSON)",
+];
+
 function doGet(e) {
   var action = e && e.parameter ? e.parameter.action : null;
 
   if (action === "list") {
     return jsonResponse({ status: "ok", records: getAllRecords() });
+  }
+
+  if (action === "listTripReports") {
+    return jsonResponse({ status: "ok", reports: getAllTripReports() });
   }
 
   return jsonResponse({ status: "ok", service: "keihi-seisan", sheet: SHEET_NAME });
@@ -104,6 +122,23 @@ function doPost(e) {
       return jsonResponse({ status: "ok" });
     }
 
+    if (payload.action === "saveTripReport") {
+      var report = payload.report;
+      if (!report || !report.id) {
+        return jsonResponse({ status: "error", message: "報告書データが不正です。" });
+      }
+      upsertTripReportRow(getOrCreateTripReportSheet(), report);
+      return jsonResponse({ status: "ok" });
+    }
+
+    if (payload.action === "deleteTripReport") {
+      if (!payload.id) {
+        return jsonResponse({ status: "error", message: "idが指定されていません。" });
+      }
+      deleteTripReportRow(getOrCreateTripReportSheet(), payload.id);
+      return jsonResponse({ status: "ok" });
+    }
+
     var transactions = payload.transactions || [];
 
     if (!Array.isArray(transactions)) {
@@ -174,6 +209,101 @@ function getOrCreateSheet() {
     sheet.setFrozenRows(1);
   }
   return sheet;
+}
+
+function getOrCreateTripReportSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(TRIP_REPORT_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TRIP_REPORT_SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, TRIP_REPORT_HEADER_ROW.length).setValues([TRIP_REPORT_HEADER_ROW]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * IDが一致する行があれば上書き、なければ末尾に追加する(出張報告書の自動保存用)。
+ */
+function upsertTripReportRow(sheet, report) {
+  var rowIndex = findTripReportRowIndex(sheet, report.id);
+  var row = [
+    report.id,
+    new Date(),
+    report.reportDate || "",
+    report.applicantName || "",
+    report.tripDate || "",
+    report.location || "",
+    report.purpose || "",
+    report.content || "",
+    report.memo || "",
+    JSON.stringify(report.expenses || []),
+  ];
+
+  if (rowIndex === -1) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  }
+}
+
+function deleteTripReportRow(sheet, id) {
+  var rowIndex = findTripReportRowIndex(sheet, id);
+  if (rowIndex !== -1) {
+    sheet.deleteRow(rowIndex);
+  }
+}
+
+function findTripReportRowIndex(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(id)) {
+      return 2 + i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * 保存済みの出張報告書をすべて読み出す。出張経費はJSON列から復元する。
+ */
+function getAllTripReports() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(TRIP_REPORT_SHEET_NAME);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return [];
+  }
+
+  var tz = ss.getSpreadsheetTimeZone();
+  var values = sheet
+    .getRange(2, 1, sheet.getLastRow() - 1, TRIP_REPORT_HEADER_ROW.length)
+    .getValues();
+
+  return values.map(function (row) {
+    var expenses = [];
+    try {
+      expenses = JSON.parse(row[9] || "[]");
+    } catch (err) {
+      expenses = [];
+    }
+    return {
+      id: safeText(row[0]),
+      updatedAt: formatDateCell(row[1], tz, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+      reportDate: formatDateCell(row[2], tz, "yyyy-MM-dd"),
+      applicantName: safeText(row[3]),
+      tripDate: formatDateCell(row[4], tz, "yyyy-MM-dd"),
+      location: safeText(row[5]),
+      purpose: safeText(row[6]),
+      content: safeText(row[7]),
+      memo: safeText(row[8]),
+      expenses: expenses,
+    };
+  });
 }
 
 function jsonResponse(obj) {

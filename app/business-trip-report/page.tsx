@@ -6,7 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import type { TripReport } from "@/lib/types";
-import { deleteTripReport, listTripReports } from "@/lib/trip-report-storage";
+import {
+  deleteTripReport,
+  listTripReports,
+  mergeRemoteTripReports,
+} from "@/lib/trip-report-storage";
+import { getGasUrl } from "@/lib/storage";
+import { deleteTripReportRemote, fetchTripReports } from "@/lib/gas-client";
 
 function yen(amount: number): string {
   return `¥${(Number(amount) || 0).toLocaleString("ja-JP")}`;
@@ -21,12 +27,31 @@ export default function TripReportListPage() {
 
   useEffect(() => {
     setReports(listTripReports());
+
+    // ローカルにない、またはスプレッドシート側の方が新しい報告書を取り込む
+    // (別ブラウザで作成した場合や、localStorageが消えた場合の復元用)。
+    const gasUrl = getGasUrl();
+    if (!gasUrl) return;
+    fetchTripReports(gasUrl)
+      .then((remote) => {
+        mergeRemoteTripReports(remote);
+        setReports(listTripReports());
+      })
+      .catch(() => {
+        // 取得できなくても、ローカルの一覧表示自体には影響させない
+      });
   }, []);
 
   function handleDelete(id: string) {
     if (!window.confirm("この出張報告書を削除しますか?")) return;
     deleteTripReport(id);
     setReports(listTripReports());
+    const gasUrl = getGasUrl();
+    if (gasUrl) {
+      deleteTripReportRemote(gasUrl, id).catch(() => {
+        // スプレッドシート側の削除に失敗しても、ローカルの削除は継続する
+      });
+    }
   }
 
   return (
@@ -43,7 +68,8 @@ export default function TripReportListPage() {
           <div>
             <h1 className="text-2xl font-bold">出張報告書</h1>
             <p className="text-sm text-muted-foreground">
-              作成した出張報告書の一覧です。このブラウザにのみ保存されます。
+              作成した出張報告書の一覧です。このブラウザに保存され、GAS WebアプリURLを
+              設定していればスプレッドシートにも保存されます。
             </p>
           </div>
           <Link href="/business-trip-report/new">

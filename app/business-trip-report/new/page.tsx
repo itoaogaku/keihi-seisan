@@ -33,6 +33,7 @@ export default function NewTripReportPage() {
       location: "",
       purpose: "",
       content: "",
+      memo: "",
       expenses: transferred,
     };
     saveTripReport(report);

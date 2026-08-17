@@ -1,4 +1,4 @@
-import type { HistoryRecord, SaveStatus, Transaction } from "./types";
+import type { HistoryRecord, SaveStatus, Transaction, TripReport } from "./types";
 import { organizationLabel, PAYMENT_METHOD_LABELS, SAVE_STATUS_LABELS } from "./types";
 
 export interface SavePayload {
@@ -175,6 +175,86 @@ export async function deleteHistoryEntry(gasUrl: string, savedAt: string): Promi
     throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
   }
   return data;
+}
+
+/**
+ * 出張報告書をスプレッドシートへ保存する(idが一致する行があれば上書き)。
+ * エディタ画面での自動保存から、変更のたびにデバウンスして呼び出される。
+ */
+export async function saveTripReportRemote(gasUrl: string, report: TripReport): Promise<GasResponse> {
+  assertValidUrl(gasUrl);
+
+  let response: Response;
+  try {
+    response = await fetch(gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveTripReport", report }),
+    });
+  } catch (err) {
+    throw new GasClientError(
+      `GASへの接続に失敗しました。URLとデプロイ設定(アクセス:全員)を確認してください。(${
+        err instanceof Error ? err.message : String(err)
+      })`
+    );
+  }
+
+  const data = await parseGasResponse(response);
+  if (data.status !== "ok") {
+    throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
+  }
+  return data;
+}
+
+/** スプレッドシートから指定idの出張報告書を削除する。 */
+export async function deleteTripReportRemote(gasUrl: string, id: string): Promise<GasResponse> {
+  assertValidUrl(gasUrl);
+
+  let response: Response;
+  try {
+    response = await fetch(gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteTripReport", id }),
+    });
+  } catch (err) {
+    throw new GasClientError(
+      `GASへの接続に失敗しました。URLとデプロイ設定(アクセス:全員)を確認してください。(${
+        err instanceof Error ? err.message : String(err)
+      })`
+    );
+  }
+
+  const data = await parseGasResponse(response);
+  if (data.status !== "ok") {
+    throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
+  }
+  return data;
+}
+
+/** スプレッドシートに保存済みの出張報告書を全件取得する。 */
+export async function fetchTripReports(gasUrl: string): Promise<TripReport[]> {
+  assertValidUrl(gasUrl);
+
+  const url = new URL(gasUrl);
+  url.searchParams.set("action", "listTripReports");
+
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), { method: "GET" });
+  } catch (err) {
+    throw new GasClientError(
+      `GASへの接続に失敗しました。URLとデプロイ設定(アクセス:全員)を確認してください。(${
+        err instanceof Error ? err.message : String(err)
+      })`
+    );
+  }
+
+  const data = await parseGasResponse(response);
+  if (data.status !== "ok") {
+    throw new GasClientError(data.message ?? "GAS側でエラーが発生しました。");
+  }
+  return Array.isArray(data.reports) ? (data.reports as TripReport[]) : [];
 }
 
 export async function testConnection(gasUrl: string): Promise<GasResponse> {

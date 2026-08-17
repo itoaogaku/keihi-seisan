@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,10 +24,20 @@ import type { HistoryRecord, TripExpenseRow, TripReport } from "@/lib/types";
 import {
   deleteTripReport,
   getTripReport,
+  mergeRemoteTripReports,
   saveTripReport,
 } from "@/lib/trip-report-storage";
 import { getGasUrl } from "@/lib/storage";
-import { fetchHistory, GasClientError } from "@/lib/gas-client";
+import {
+  deleteTripReportRemote,
+  fetchHistory,
+  fetchTripReports,
+  GasClientError,
+  saveTripReportRemote,
+} from "@/lib/gas-client";
+
+/** GASへの同期はデバウンスして送る(入力のたびに毎回POSTしないようにするため)。 */
+const REMOTE_SYNC_DELAY_MS = 1500;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -63,18 +73,58 @@ export default function TripReportEditorPage() {
 
   useEffect(() => {
     const found = getTripReport(id);
-    if (!found) {
+    if (found) {
+      setReport(found);
+      setLoaded(true);
+      return;
+    }
+
+    // ローカルになければ、スプレッドシート側に残っていないか確認する
+    // (別ブラウザで開いた場合や、localStorageが消えてしまった場合の復元用)。
+    const gasUrl = getGasUrl();
+    if (!gasUrl) {
       setNotFound(true);
       return;
     }
-    setReport(found);
-    setLoaded(true);
+    fetchTripReports(gasUrl)
+      .then((remote) => {
+        const match = remote.find((r) => r.id === id);
+        if (!match) {
+          setNotFound(true);
+          return;
+        }
+        mergeRemoteTripReports(remote);
+        setReport(match);
+        setLoaded(true);
+      })
+      .catch(() => {
+        setNotFound(true);
+      });
   }, [id]);
 
   // 読み込みが終わるまでは、まだ空の初期状態を誤って保存しないようにする
   useEffect(() => {
     if (!loaded || !report) return;
     saveTripReport({ ...report, updatedAt: new Date().toISOString() });
+  }, [report, loaded]);
+
+  // スプレッドシートへの保存は、入力のたびに毎回POSTしないようデバウンスする。
+  const remoteSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!loaded || !report) return;
+    const gasUrl = getGasUrl();
+    if (!gasUrl) return;
+
+    if (remoteSyncTimer.current) clearTimeout(remoteSyncTimer.current);
+    remoteSyncTimer.current = setTimeout(() => {
+      saveTripReportRemote(gasUrl, report).catch(() => {
+        // スプレッドシートへの同期に失敗しても、ローカルの保存・編集は継続できるようにする
+      });
+    }, REMOTE_SYNC_DELAY_MS);
+
+    return () => {
+      if (remoteSyncTimer.current) clearTimeout(remoteSyncTimer.current);
+    };
   }, [report, loaded]);
 
   const total = report ? report.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) : 0;
@@ -116,7 +166,14 @@ export default function TripReportEditorPage() {
 
   function handleDeleteReport() {
     if (!window.confirm("この出張報告書を削除しますか?")) return;
+    if (remoteSyncTimer.current) clearTimeout(remoteSyncTimer.current);
     deleteTripReport(id);
+    const gasUrl = getGasUrl();
+    if (gasUrl) {
+      deleteTripReportRemote(gasUrl, id).catch(() => {
+        // スプレッドシート側の削除に失敗しても、ローカルの削除・画面遷移は継続する
+      });
+    }
     router.push("/business-trip-report");
   }
 
@@ -215,7 +272,8 @@ export default function TripReportEditorPage() {
             <h1 className="text-2xl font-bold">出張報告書</h1>
             <p className="text-sm text-muted-foreground">
               経費精算PDF作成画面でチェックした明細を転記するか、出張経費欄で期間を指定して
-              保存済みの明細を検索・追加できます。内容は自動的に保存されます。
+              保存済みの明細を検索・追加できます。内容は自動的に保存され、GAS
+              WebアプリURLを設定していればスプレッドシートにも保存されます。
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={handleDeleteReport}>
@@ -306,6 +364,22 @@ export default function TripReportEditorPage() {
                   onChange={(e) => updateField("content", e.target.value)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>メモ</CardTitle>
+              <CardDescription>社内確認用の任意メモです。PDF・印刷には出力されません。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                id="memo"
+                className="min-h-20"
+                value={report.memo}
+                onChange={(e) => updateField("memo", e.target.value)}
+                placeholder="経理確認用のメモなど"
+              />
             </CardContent>
           </Card>
 

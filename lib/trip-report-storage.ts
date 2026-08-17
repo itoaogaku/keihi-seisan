@@ -78,3 +78,21 @@ export function saveTripReport(report: TripReport): void {
 export function deleteTripReport(id: string): void {
   writeAllTripReports(readAllTripReports().filter((r) => r.id !== id));
 }
+
+/**
+ * スプレッドシートから取得した出張報告書を、ローカルの保存内容とidで突き合わせてマージする。
+ * ローカルに存在しないもの、またはリモート側の方が新しい(updatedAtが新しい)ものだけを取り込む。
+ * ブラウザのlocalStorageが失われた場合や別ブラウザで開いた場合の復元に使う。
+ */
+export function mergeRemoteTripReports(remote: TripReport[]): void {
+  if (remote.length === 0) return;
+  const reports = readAllTripReports();
+  const byId = new Map(reports.map((r) => [r.id, r]));
+  for (const r of remote) {
+    const existing = byId.get(r.id);
+    if (!existing || r.updatedAt > existing.updatedAt) {
+      byId.set(r.id, r);
+    }
+  }
+  writeAllTripReports(Array.from(byId.values()));
+}
