@@ -189,6 +189,15 @@ export default function NewEntryPage() {
     setStatus({ type: "success", message: "決済を1件追加しました。" });
   }
 
+  /** 手入力の明細(現金・カード(手入力))の打ち間違いを修正する。CSV取り込み分は対象外。 */
+  function handleEditTransaction(
+    id: string,
+    patch: { date: string; paymentMethod: Transaction["paymentMethod"]; description: string; amount: number }
+  ) {
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    setStatus({ type: "success", message: "明細を更新しました。" });
+  }
+
   function handleSortByDate() {
     setTransactions((prev) => [...prev].sort((a, b) => a.date.localeCompare(b.date)));
   }
@@ -415,6 +424,7 @@ export default function NewEntryPage() {
                 transactions={transactions}
                 onChangeOrganization={handleChangeOrganization}
                 onChangeMemo={handleChangeMemo}
+                onEditTransaction={handleEditTransaction}
                 onDelete={handleDelete}
                 onSortByDate={handleSortByDate}
                 selectedIds={selectedIds}

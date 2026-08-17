@@ -11,16 +11,22 @@ import {
 } from "@/components/ui/table";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog } from "@/components/ui/dialog";
 import { ORGANIZATIONS, ORGANIZATION_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/types";
-import type { OrganizationId, Transaction } from "@/lib/types";
-import { ArrowUpDown, Trash2 } from "lucide-react";
+import type { OrganizationId, PaymentMethod, Transaction } from "@/lib/types";
+import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: Transaction[];
   onChangeOrganization: (id: string, organization: OrganizationId) => void;
   onChangeMemo: (id: string, memo: string) => void;
+  onEditTransaction: (
+    id: string,
+    patch: { date: string; paymentMethod: PaymentMethod; description: string; amount: number }
+  ) => void;
   onDelete: (id: string) => void;
   onSortByDate: () => void;
   selectedIds: Set<string>;
@@ -60,6 +66,7 @@ export function TransactionTable({
   transactions,
   onChangeOrganization,
   onChangeMemo,
+  onEditTransaction,
   onDelete,
   onSortByDate,
   selectedIds,
@@ -68,6 +75,11 @@ export function TransactionTable({
   settledKeys,
 }: TransactionTableProps) {
   const [onlyUnclassified, setOnlyUnclassified] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState<PaymentMethod>("cash");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAmount, setEditAmount] = useState("");
 
   const visible = useMemo(
     () => (onlyUnclassified ? transactions.filter((t) => !t.organization) : transactions),
@@ -77,6 +89,34 @@ export function TransactionTable({
   const allVisibleSelected = visible.length > 0 && visible.every((t) => selectedIds.has(t.id));
 
   const unclassifiedCount = transactions.filter((t) => !t.organization).length;
+
+  function openEdit(t: Transaction) {
+    setEditingId(t.id);
+    setEditDate(t.date);
+    setEditPaymentMethod(t.paymentMethod);
+    setEditDescription(t.description);
+    setEditAmount(String(t.amount));
+  }
+
+  function closeEdit() {
+    setEditingId(null);
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    const amountValue = Number(editAmount);
+    if (!editDate || editDescription.trim() === "" || !(amountValue > 0)) return;
+    onEditTransaction(editingId, {
+      date: editDate,
+      paymentMethod: editPaymentMethod,
+      description: editDescription.trim(),
+      amount: amountValue,
+    });
+    closeEdit();
+  }
+
+  const editValid =
+    editDate !== "" && editDescription.trim() !== "" && Number(editAmount) > 0;
 
   if (transactions.length === 0) {
     return (
@@ -132,7 +172,7 @@ export function TransactionTable({
             <TableHead className="w-28 text-right">金額</TableHead>
             <TableHead className="w-48">メモ</TableHead>
             <TableHead className="w-64">仕分け(請求先)</TableHead>
-            <TableHead className="w-10" />
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -140,6 +180,7 @@ export function TransactionTable({
             const isDuplicate = Boolean(
               settledKeys?.has(duplicateKey(t.date, t.description))
             );
+            const isManual = !t.sourceFile;
             return (
             <TableRow key={t.id} className={isDuplicate ? "bg-amber-50" : undefined}>
               <TableCell>
@@ -217,20 +258,90 @@ export function TransactionTable({
                 </Select>
               </TableCell>
               <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(t.id)}
-                  aria-label="この明細を削除"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {isManual && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit(t)}
+                      aria-label="この明細を編集"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(t.id)}
+                    aria-label="この明細を削除"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
             );
           })}
         </TableBody>
       </Table>
+
+      <Dialog
+        open={editingId !== null}
+        onClose={closeEdit}
+        title="手入力の明細を編集"
+        description="打ち間違いなどを修正できます(CSVから取り込んだ明細はここでは編集できません)。"
+      >
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-date">支払日</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-payment-method">方法</Label>
+              <Select
+                id="edit-payment-method"
+                value={editPaymentMethod}
+                onChange={(e) => setEditPaymentMethod(e.target.value as PaymentMethod)}
+              >
+                <option value="cash">{PAYMENT_METHOD_LABELS.cash}</option>
+                <option value="card">{PAYMENT_METHOD_LABELS.card}</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="edit-description">内容</Label>
+              <Input
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-amount">金額</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                min={0}
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" size="sm" onClick={closeEdit}>
+              キャンセル
+            </Button>
+            <Button size="sm" onClick={saveEdit} disabled={!editValid}>
+              保存
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
