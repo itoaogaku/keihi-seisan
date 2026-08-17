@@ -23,10 +23,8 @@ import {
   Download,
   FileText,
   Pencil,
-  Plane,
   Plus,
   RefreshCw,
-  Settings,
   Trash2,
 } from "lucide-react";
 import type { HistoryRecord, Transaction } from "@/lib/types";
@@ -216,18 +214,6 @@ export default function HomePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/business-trip-report">
-            <Button variant="outline" size="sm">
-              <Plane className="mr-2 h-4 w-4" />
-              出張報告書
-            </Button>
-          </Link>
-          <Link href="/settings">
-            <Button variant="outline" size="sm">
-              <Settings className="mr-2 h-4 w-4" />
-              設定
-            </Button>
-          </Link>
           <Link href="/new">
             <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />

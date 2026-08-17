@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppHeader } from "@/components/app-header";
 
 export const metadata: Metadata = {
   title: "経費精算PDF作成",
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="min-h-screen bg-secondary/40 antialiased">
+        <AppHeader />
         <div className="mx-auto max-w-6xl px-4 py-8">{children}</div>
       </body>
     </html>

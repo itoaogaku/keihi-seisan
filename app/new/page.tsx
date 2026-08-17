@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { ArrowLeft, Eye, Pencil, Plane, Settings } from "lucide-react";
+import { ArrowLeft, Eye, Pencil, Plane } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
 import { NON_BILLABLE_ORGANIZATION_IDS, organizationIdByLabel } from "@/lib/types";
 import { aggregateByOrganization } from "@/lib/aggregate";
@@ -336,27 +336,11 @@ export default function NewEntryPage() {
           <ArrowLeft className="h-4 w-4" />
           一覧に戻る
         </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">経費精算PDF作成</h1>
-            <p className="text-sm text-muted-foreground">
-              クレジットカード明細を仕分けして、組織ごとの経費精算PDFを作成します。
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/business-trip-report">
-              <Button variant="outline" size="sm">
-                <Plane className="mr-2 h-4 w-4" />
-                出張報告書
-              </Button>
-            </Link>
-            <Link href="/settings">
-              <Button variant="outline" size="sm">
-                <Settings className="mr-2 h-4 w-4" />
-                設定
-              </Button>
-            </Link>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">経費精算PDF作成</h1>
+          <p className="text-sm text-muted-foreground">
+            クレジットカード明細を仕分けして、組織ごとの経費精算PDFを作成します。
+          </p>
         </div>
       </header>
 
