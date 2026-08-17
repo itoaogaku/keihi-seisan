@@ -1,14 +1,15 @@
-export type OrganizationId = "exclude" | "orgA" | "orgB" | "orgC" | "orgD";
+export type OrganizationId = "exclude" | "settled" | "orgA" | "orgB" | "orgC" | "orgD";
 
 export interface OrganizationDef {
   id: OrganizationId;
   label: string;
-  /** 除外(プライベート決済)は集計・PDF・保存の対象外 */
+  /** 除外(プライベート決済)・精算済みは集計・PDF・保存の対象外 */
   isBillable: boolean;
 }
 
 export const ORGANIZATIONS: OrganizationDef[] = [
   { id: "exclude", label: "除外(プライベート決済)", isBillable: false },
+  { id: "settled", label: "精算済み(請求対象外)", isBillable: false },
   { id: "orgA", label: "株式会社アスリートキャリアセンター", isBillable: true },
   { id: "orgB", label: "株式会社原D&S", isBillable: true },
   { id: "orgC", label: "一般社団法人アスリートセンター", isBillable: true },
@@ -16,6 +17,11 @@ export const ORGANIZATIONS: OrganizationDef[] = [
 ];
 
 export const BILLABLE_ORGANIZATIONS = ORGANIZATIONS.filter((o) => o.isBillable);
+
+/** 除外・精算済みなど、集計・PDF・保存対象外の組織IDの集合。 */
+export const NON_BILLABLE_ORGANIZATION_IDS = new Set(
+  ORGANIZATIONS.filter((o) => !o.isBillable).map((o) => o.id)
+);
 
 export function organizationLabel(id: OrganizationId | null): string {
   if (!id) return "未仕分け";
@@ -30,6 +36,7 @@ export function organizationIdByLabel(label: string): OrganizationId | null {
 /** 仕分けプルダウンの視認性向上のための、請求先ごとの色。青山学院大学陸上競技部(orgD)は緑。 */
 export const ORGANIZATION_COLORS: Record<OrganizationId, { bg: string; text: string }> = {
   exclude: { bg: "#f3f4f6", text: "#4b5563" },
+  settled: { bg: "#ede9fe", text: "#5b21b6" },
   orgA: { bg: "#dbeafe", text: "#1e3a8a" },
   orgB: { bg: "#fef3c7", text: "#78350f" },
   orgC: { bg: "#fce7f3", text: "#831843" },

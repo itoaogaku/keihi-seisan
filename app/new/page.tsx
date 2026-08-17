@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { ArrowLeft, Eye, Pencil, Plane, Settings } from "lucide-react";
 import type { OrganizationId, Transaction } from "@/lib/types";
-import { organizationIdByLabel } from "@/lib/types";
+import { NON_BILLABLE_ORGANIZATION_IDS, organizationIdByLabel } from "@/lib/types";
 import { aggregateByOrganization } from "@/lib/aggregate";
 import { buildSummaryHtml } from "@/lib/pdf-template";
 import {
@@ -225,16 +225,16 @@ export default function NewEntryPage() {
     });
   }
 
-  /** 選択した明細を出張報告書タブへ経費として転記する。除外扱いの明細は転記しない。 */
+  /** 選択した明細を出張報告書タブへ経費として転記する。除外・精算済み扱いの明細は転記しない。 */
   function handleTranscribeToTripReport() {
     const selected = transactions.filter(
-      (t) => selectedIds.has(t.id) && t.organization !== "exclude"
+      (t) => selectedIds.has(t.id) && !(t.organization && NON_BILLABLE_ORGANIZATION_IDS.has(t.organization))
     );
 
     if (selected.length === 0) {
       setStatus({
         type: "error",
-        message: "転記できる明細が選択されていません(「除外」の明細は転記できません)。",
+        message: "転記できる明細が選択されていません(「除外」「精算済み」の明細は転記できません)。",
       });
       return;
     }
@@ -401,7 +401,8 @@ export default function NewEntryPage() {
             <CardHeader>
               <CardTitle>明細の仕分け</CardTitle>
               <CardDescription>
-                各明細の請求先組織を選択してください。プライベートの決済は「除外」を選びます。
+                各明細の請求先組織を選択してください。プライベートの決済は「除外」、
+                すでに他の方法で精算済みの明細は「精算済み」を選びます(いずれも集計・PDFの対象外)。
                 チェックした明細は「出張報告書へ転記」で出張報告書タブの経費欄に追加できます。
               </CardDescription>
             </CardHeader>

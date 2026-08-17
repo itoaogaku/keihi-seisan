@@ -12,7 +12,7 @@ export function SummaryPanel({ result }: { result: AggregationResult }) {
     <Card>
       <CardHeader>
         <CardTitle>2. 集計結果</CardTitle>
-        <CardDescription>現在の明細の集計です(除外に仕分けた明細は含みません)</CardDescription>
+        <CardDescription>現在の明細の集計です(除外・精算済みに仕分けた明細は含みません)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between rounded-lg bg-primary px-5 py-4 text-primary-foreground">

@@ -30,20 +30,23 @@ import {
   Trash2,
 } from "lucide-react";
 import type { HistoryRecord, Transaction } from "@/lib/types";
-import { organizationIdByLabel, organizationLabel, paymentMethodByLabel } from "@/lib/types";
+import { ORGANIZATIONS, organizationIdByLabel, paymentMethodByLabel } from "@/lib/types";
 import { getGasUrl, pushEditBuffer } from "@/lib/storage";
 import { deleteHistoryEntry, fetchHistory, GasClientError } from "@/lib/gas-client";
 import { exportHistoryToCsv } from "@/lib/csv-export";
 
 const ALL_ISSUE_DATES = "all";
-const EXCLUDE_LABEL = organizationLabel("exclude");
+/** 除外(プライベート決済)・精算済みなど、集計・PDFの対象外となる組織のラベル一覧。 */
+const NON_BILLABLE_LABELS = new Set(
+  ORGANIZATIONS.filter((o) => !o.isBillable).map((o) => o.label)
+);
 
 interface HistoryEntry {
   savedAt: string;
   status: string;
   issueDate: string;
   records: HistoryRecord[];
-  /** 除外(プライベート決済)を除いた金額合計・件数。PDF・集計と同じ扱いにしている。 */
+  /** 除外(プライベート決済)・精算済みを除いた金額合計・件数。PDF・集計と同じ扱いにしている。 */
   total: number;
   billableCount: number;
 }
@@ -69,7 +72,7 @@ function groupIntoEntries(records: HistoryRecord[]): HistoryEntry[] {
       map.set(r.savedAt, entry);
     }
     entry.records.push(r);
-    if (r.organization !== EXCLUDE_LABEL) {
+    if (!NON_BILLABLE_LABELS.has(r.organization)) {
       entry.total += Number(r.amount) || 0;
       entry.billableCount += 1;
     }
@@ -313,7 +316,7 @@ export default function HomePage() {
                         <span className="text-xs text-muted-foreground">
                           {entry.billableCount}件
                           {entry.records.length > entry.billableCount &&
-                            `(除外${entry.records.length - entry.billableCount}件)`}
+                            `(除外・精算済み${entry.records.length - entry.billableCount}件)`}
                         </span>
                         <span className="ml-auto font-semibold">{yen(entry.total)}</span>
                         <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
@@ -350,7 +353,7 @@ export default function HomePage() {
                           </TableHeader>
                           <TableBody>
                             {entry.records.map((r, i) => {
-                              const isExcluded = r.organization === EXCLUDE_LABEL;
+                              const isExcluded = NON_BILLABLE_LABELS.has(r.organization);
                               return (
                                 <TableRow
                                   key={`${r.date}-${r.description}-${i}`}
