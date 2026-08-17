@@ -13,6 +13,7 @@ const COLUMNS: Array<{ key: keyof HistoryRecord; label: string }> = [
   { key: "description", label: "内容" },
   { key: "memo", label: "メモ" },
   { key: "amount", label: "金額" },
+  { key: "sourceFile", label: "取込ファイル" },
 ];
 
 /**

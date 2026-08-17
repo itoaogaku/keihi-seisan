@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { parseTransactionsFromText } from "@/lib/csv-parser";
 import { decodeCsvArrayBuffer } from "@/lib/encoding";
 import type { Transaction } from "@/lib/types";
@@ -11,9 +12,11 @@ import { Upload } from "lucide-react";
 
 interface CsvUploaderProps {
   onImport: (transactions: Transaction[], skippedRows: number) => void;
+  /** 現在の明細に含まれる、取り込み済みCSVファイル名の一覧(重複なし)。 */
+  importedFiles?: string[];
 }
 
-export function CsvUploader({ onImport }: CsvUploaderProps) {
+export function CsvUploader({ onImport, importedFiles = [] }: CsvUploaderProps) {
   const [pasteText, setPasteText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,11 +40,22 @@ export function CsvUploader({ onImport }: CsvUploaderProps) {
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>1. 明細の取り込み</CardTitle>
-          <CardDescription>
-            クレジットカード会社からダウンロードしたCSVファイルを取り込んでください。
-          </CardDescription>
+        <CardHeader className="flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle>1. 明細の取り込み</CardTitle>
+            <CardDescription>
+              クレジットカード会社からダウンロードしたCSVファイルを取り込んでください。
+            </CardDescription>
+          </div>
+          {importedFiles.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-1">
+              {importedFiles.map((f) => (
+                <Badge key={f} variant="secondary" className="whitespace-nowrap">
+                  {f} 読み込み済み
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div

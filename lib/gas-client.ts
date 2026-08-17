@@ -17,6 +17,7 @@ export interface SavePayload {
     memo: string;
     paymentMethod: string;
     paymentMethodLabel: string;
+    sourceFile: string;
   }>;
 }
 
@@ -81,6 +82,7 @@ export function buildSavePayload(
         memo: t.memo,
         paymentMethod: t.paymentMethod,
         paymentMethodLabel: PAYMENT_METHOD_LABELS[t.paymentMethod],
+        sourceFile: t.sourceFile ?? "",
       })),
   };
 }

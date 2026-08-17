@@ -113,6 +113,15 @@ export default function NewEntryPage() {
 
   const unclassifiedCount = transactions.filter((t) => !t.organization).length;
 
+  /** 現在の明細に含まれる、取り込み済みCSVファイル名の一覧(重複なし)。 */
+  const importedFileNames = useMemo(
+    () =>
+      Array.from(
+        new Set(transactions.map((t) => t.sourceFile).filter((f): f is string => Boolean(f)))
+      ),
+    [transactions]
+  );
+
   const aggregation = useMemo(() => aggregateByOrganization(transactions), [transactions]);
 
   /** 実際にPDFへ出力されるものと同じHTMLを、確定前のプレビュー表示にも使う。 */
@@ -384,7 +393,7 @@ export default function NewEntryPage() {
         </div>
       ) : (
         <>
-          <CsvUploader onImport={handleImport} />
+          <CsvUploader onImport={handleImport} importedFiles={importedFileNames} />
 
           <CashEntryForm onAdd={handleAddCashTransaction} />
 

@@ -21,6 +21,7 @@ var HEADER_ROW = [
   "メモ",
   "金額",
   "請求先組織",
+  "取込ファイル",
 ];
 
 function doGet(e) {
@@ -57,6 +58,7 @@ function getAllRecords() {
       memo: safeText(row[6]),
       amount: row[7],
       organization: safeText(row[8]),
+      sourceFile: safeText(row[9]) || "",
     };
   });
 }
@@ -128,6 +130,7 @@ function doPost(e) {
         t.memo || "",
         Number(t.amount) || 0,
         t.organizationName || t.organization || "",
+        t.sourceFile || "",
       ];
     });
 

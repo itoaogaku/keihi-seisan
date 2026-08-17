@@ -114,4 +114,6 @@ export interface HistoryRecord {
   memo: string;
   amount: number;
   organization: string;
+  /** CSVファイルから取り込んだ場合の取り込み元ファイル名(手入力・貼り付けの場合は空文字)。 */
+  sourceFile: string;
 }

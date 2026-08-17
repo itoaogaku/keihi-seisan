@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
+  FileText,
   Pencil,
   Plane,
   Plus,
@@ -151,6 +152,7 @@ export default function HomePage() {
       organization: organizationIdByLabel(r.organization),
       memo: r.memo,
       paymentMethod: paymentMethodByLabel(r.paymentMethod),
+      sourceFile: r.sourceFile || undefined,
     }));
 
     pushEditBuffer({ transactions, issueDate: entry.issueDate, savedAt: entry.savedAt });
@@ -365,7 +367,15 @@ export default function HomePage() {
                                     </Badge>
                                   </TableCell>
                                   <TableCell>{r.organization}</TableCell>
-                                  <TableCell>{r.description}</TableCell>
+                                  <TableCell>
+                                    <div>{r.description}</div>
+                                    {r.sourceFile && (
+                                      <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                        <FileText className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{r.sourceFile}</span>
+                                      </div>
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-muted-foreground">{r.memo}</TableCell>
                                   <TableCell className="text-right font-medium">
                                     {yen(r.amount)}
